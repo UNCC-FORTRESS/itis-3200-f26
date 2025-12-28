@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 13: C Memory Visualizer (CSim)</title>
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --panel: #252526;
+            --text: #d4d4d4;
+            --accent: #007acc;
+            --highlight: #3a3d41;
+            --stack-border: #444;
+        }
+
+        body {
+            font-family: 'Segoe UI', Consolas, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Layout */
+        header {
+            background: #333;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #000;
+        }
+
+        .main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .col {
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        #code-col {
+            flex: 1;
+            border-right: 1px solid #444;
+            background: var(--panel);
+        }
+
+        #stack-col {
+            flex: 1;
+            background: #1e1e1e;
+            overflow-y: auto;
+        }
+
+        /* Code View */
+        .line {
+            font-family: 'Consolas', monospace;
+            padding: 2px 5px;
+            white-space: pre;
+            border-left: 3px solid transparent;
+            cursor: default;
+        }
+
+        .line-num {
+            color: #858585;
+            display: inline-block;
+            width: 30px;
+            text-align: right;
+            margin-right: 10px;
+        }
+
+        .active-line {
+            background-color: var(--highlight);
+            border-left-color: #d7ba7d;
+            color: white;
+        }
+
+        .comment {
+            color: #6a9955;
+        }
+
+        .keyword {
+            color: #569cd6;
+        }
+
+        .fn-name {
+            color: #dcdcaa;
+        }
+
+        .string {
+            color: #ce9178;
+        }
+
+        /* Controls */
+        #controls {
+            padding: 10px;
+            background: #2d2d2d;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            border-bottom: 1px solid #444;
+        }
+
+        button {
+            padding: 8px 16px;
+            background: var(--accent);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #0062a3;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        select {
+            background: #3c3c3c;
+            color: white;
+            padding: 5px;
+            border: 1px solid #555;
+        }
+
+        /* Stack Vis */
+        .stack-frame {
+            border: 2px solid #555;
+            margin-bottom: 15px;
+            position: relative;
+            background: #2a2a2e;
+        }
+
+        .frame-header {
+            background: #333;
+            padding: 5px;
+            font-weight: bold;
+            font-size: 0.9em;
+            color: #8adaf1;
+            text-align: center;
+            border-bottom: 1px solid #555;
+        }
+
+        .mem-block {
+            display: flex;
+            border-bottom: 1px solid #444;
+            font-family: 'Consolas', monospace;
+            font-size: 0.9em;
+            transition: background 0.5s;
+        }
+
+        .mem-addr {
+            width: 80px;
+            color: #888;
+            padding: 4px;
+            border-right: 1px solid #444;
+            background: #222;
+            font-size: 0.8em;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .mem-name {
+            width: 100px;
+            color: #dcdcaa;
+            padding: 4px;
+            border-right: 1px solid #444;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .mem-val {
+            flex: 1;
+            padding: 4px 10px;
+            color: #9cdcfe;
+            background: #1e1e1e;
+            display: flex;
+            align-items: center;
+        }
+
+        .val-changed {
+            background-color: #5a3e1e !important;
+        }
+
+        .corrupted {
+            color: #f48771;
+            font-weight: bold;
+            background: #3a0000;
+        }
+
+        /* Legend */
+        .legend {
+            font-size: 0.8em;
+            color: #aaa;
+            margin-top: 10px;
+        }
+
+        .legend span {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            margin-right: 5px;
+            vertical-align: middle;
+        }
+
+        #log-panel {
+            height: 100px;
+            background: #111;
+            color: #0f0;
+            font-family: 'Consolas', monospace;
+            padding: 10px;
+            overflow-y: auto;
+            border-top: 2px solid #444;
+            font-size: 0.9em;
+        }
+
+        /* Animation */
+        @keyframes flash {
+            0% {
+                background: #fff;
+            }
+
+            100% {
+                background: #5a3e1e;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <span><strong>CSim</strong> | Visual C Memory Tracer</span>
+        <div>
+            Scenario:
+            <select id="scenario-sel" onchange="loadScenario()">
+                <option value="A">Variant A: Basic Stack (Function Call)</option>
+                <option value="B">Variant B: Buffer Overflow (strcpy)</option>
+                <option value="C">Variant C: Shellcode Injection</option>
+            </select>
+        </div>
+    </header>
+
+    <div id="controls">
+        <button onclick="reset()">Record / Reset</button>
+        <button onclick="step()" id="btn-next">Step Next &rarr;</button>
+        <span style="flex:1"></span>
+        <span id="status">Ready</span>
+    </div>
+
+    <div class="main">
+        <div id="code-col" class="col">
+            <h3>Source Code</h3>
+            <div id="code-view"></div>
+        </div>
+        <div id="stack-col" class="col">
+            <h3>Memory (Stack) <span style="font-size:0.6em; float:right;">High Addr &uarr;</span></h3>
+            <div id="stack-view"></div>
+            <div class="legend">
+                <span style="background:#333; border:1px solid #555;"></span> Saved Frame Pointer (EBP) <br>
+                <span style="background:#2a2a2e; border:1px solid #555;"></span> Local Variables <br>
+                <span style="background:#5a3e1e;"></span> Recently Modified
+            </div>
+        </div>
+    </div>
+    <div id="log-panel"></div>
+
+    <script>
+        // --- Scenarios ---
+        const scenarios = {
+            A: {
+                code: [
+                    "void add(int a, int b) {",
+                    "    int result;",
+                    "    result = a + b;",
+                    "    return;",
+                    "}",
+                    "",
+                    "int main() {",
+                    "    int x = 10;",
+                    "    int y = 20;",
+                    "    add(x, y);",
+                    "    return 0;",
+                    "}"
+                ],
+                steps: [
+                    { line: 6, action: "Init main", stack: [] },
+                    { line: 7, action: "Define x", stack: [{ name: "main() Frame", type: "frame", items: [{ addr: "0x1008", name: "x", val: 10 }] }] },
+                    { line: 8, action: "Define y", stack: [{ name: "main() Frame", type: "frame", items: [{ addr: "0x1008", name: "x", val: 10 }, { addr: "0x1004", name: "y", val: 20 }] }] },
+                    { line: 9, action: "Call add() - Push Args & Ret", stack: [{ name: "main() Frame", type: "frame", items: [{ addr: "0x1008", name: "x", val: 10 }, { addr: "0x1004", name: "y", val: 20 }] }, { name: "add() Frame", type: "frame", items: [{ addr: "0x0FFC", name: "Arg b", val: 20 }, { addr: "0x0FF8", name: "Arg a", val: 10 }, { addr: "0x0FF4", name: "Ret Addr", val: "0xCODE_LINE_10" }, { addr: "0x0FF0", name: "Saved EBP", val: "0x1010" }] }] },
+                    { line: 0, action: "Enter add()", stack: "SAME" },
+                    { line: 1, action: "Calc result", stack: [{ name: "main() Frame", type: "frame", items: [{ addr: "0x1008", name: "x", val: 10 }, { addr: "0x1004", name: "y", val: 20 }] }, { name: "add() Frame", type: "frame", items: [{ addr: "0x0FFC", name: "Arg b", val: 20 }, { addr: "0x0FF8", name: "Arg a", val: 10 }, { addr: "0x0FF4", name: "Ret Addr", val: "0xCODE_LINE_10" }, { addr: "0x0FF0", name: "Saved EBP", val: "0x1010" }, { addr: "0x0FEC", name: "result", val: "?" }] }] },
+                    { line: 2, action: "Assign result", stack: [{ name: "main() Frame", type: "frame", items: [{ addr: "0x1008", name: "x", val: 10 }, { addr: "0x1004", name: "y", val: 20 }] }, { name: "add() Frame", type: "frame", items: [{ addr: "0x0FFC", name: "Arg b", val: 20 }, { addr: "0x0FF8", name: "Arg a", val: 10 }, { addr: "0x0FF4", name: "Ret Addr", val: "0xCODE_LINE_10" }, { addr: "0x0FF0", name: "Saved EBP", val: "0x1010" }, { addr: "0x0FEC", name: "result", val: 30, highlight: true }] }] },
+                    { line: 3, action: "Return - Pop Frame", stack: [{ name: "main() Frame", type: "frame", items: [{ addr: "0x1008", name: "x", val: 10 }, { addr: "0x1004", name: "y", val: 20 }] }] },
+                    { line: 10, action: "Back in main", stack: "SAME" },
+                    { line: 11, action: "End", stack: [] }
+                ]
+            },
+            B: {
+                code: [
+                    "void vuln(char *input) {",
+                    "    char buffer[4]; // Small!",
+                    "    strcpy(buffer, input);",
+                    "    return;",
+                    "}",
+                    "",
+                    "int main() {",
+                    "    char *pay = 'AAAAXXXXDEAD';",
+                    "    vuln(pay);",
+                    "    return 0;",
+                    "}"
+                ],
+                steps: [
+                    { line: 6, action: "Start main", stack: [] },
+                    { line: 7, action: "Define Payload", stack: [{ name: "main()", type: "frame", items: [{ name: "pay", val: "Pointer -> 'AAAAXXXXDEAD'" }] }] },
+                    { line: 8, action: "Call vuln()", stack: [{ name: "vuln()", type: "frame", items: [{ name: "Ret Addr", val: "0xMAIN_RET" }, { name: "Saved EBP", val: "0xOLD_BP" }, { name: "buffer[0..3]", val: "????????" }] }] },
+                    { line: 0, action: "Enter vuln", stack: "SAME" },
+                    { line: 1, action: "Alloc Buffer", stack: "SAME" },
+                    { line: 2, action: "strcpy() START", stack: "SAME" },
+                    { line: 2, action: "Write 'AAAA' (Buffer)", stack: [{ name: "vuln()", type: "frame", items: [{ name: "Ret Addr", val: "0xMAIN_RET" }, { name: "Saved EBP", val: "0xOLD_BP" }, { name: "buffer[0..3]", val: "41414141 ('AAAA')", highlight: true }] }] },
+                    { line: 2, action: "Write 'XXXX' (Overflow SBP)", stack: [{ name: "vuln()", type: "frame", items: [{ name: "Ret Addr", val: "0xMAIN_RET" }, { name: "Saved EBP", val: "58585858 ('XXXX')", highlight: true, style: "corrupted" }, { name: "buffer[0..3]", val: "41414141 ('AAAA')" }] }] },
+                    { line: 2, action: "Write 'DEAD' (Smash Ret)", stack: [{ name: "vuln()", type: "frame", items: [{ name: "Ret Addr", val: "44454144 ('DEAD')", highlight: true, style: "corrupted" }, { name: "Saved EBP", val: "58585858 ('XXXX')", style: "corrupted" }, { name: "buffer[0..3]", val: "41414141 ('AAAA')" }] }] },
+                    { line: 3, action: "RETURN -> CRASH", stack: "SAME" },
+                    { line: 3, action: "Jumping to 0x44454144...", stack: "SAME" }
+                ]
+            },
+            C: {
+                code: [
+                    "// Shellcode Injection",
+                    "int main() {",
+                    "   char buf[8];",
+                    "   // Input: NOPs + Shellcode + Addr",
+                    "   gets(buf);",
+                    "   return;",
+                    "}"
+                ],
+                steps: [
+                    { line: 1, action: "Start", stack: [] },
+                    { line: 2, action: "Alloc Buf", stack: [{ name: "main", type: "frame", items: [{ name: "Ret Addr", val: "0xLIBC_EXIT" }, { name: "Saved EBP", val: "0xSTACK_TOP" }, { name: "buf[0..7]", val: "????????????????" }] }] },
+                    { line: 4, action: "gets() Input", stack: [{ name: "main", type: "frame", items: [{ name: "Ret Addr", val: "0xLIBC_EXIT" }, { name: "Saved EBP", val: "0xSTACK_TOP" }, { name: "buf[0..7]", val: "[NOP SLED...]", highlight: true }] }] },
+                    { line: 4, action: "Overflow Ret", stack: [{ name: "main", type: "frame", items: [{ name: "Ret Addr", val: "0xBFFF8000 (Stack Addr)", highlight: true, style: "corrupted" }, { name: "Saved EBP", val: "0x90909090", style: "corrupted" }, { name: "buf[0..7]", val: "[SHELLCODE...]" }] }] },
+                    { line: 5, action: "RET -> Executes Stack", stack: "SAME" }
+                ]
+            }
+        };
+
+        let curScenario = null;
+        let stepIdx = 0;
+
+        function init() {
+            loadScenario();
+        }
+
+        function loadScenario() {
+            const key = document.getElementById('scenario-sel').value;
+            curScenario = scenarios[key];
+            stepIdx = 0;
+
+            // Render Code
+            const codeDiv = document.getElementById('code-view');
+            codeDiv.innerHTML = curScenario.code.map((l, i) =>
+                `<div class="line" id="line-${i}"><span class="line-num">${i}</span>${highlightSyntax(l)}</div>`
+            ).join('');
+
+            reset();
+        }
+
+        function highlightSyntax(line) {
+            // Very basic simple highlighter
+            line = line.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+            line = line.replace(/\/\/.*/g, '<span class="comment">$&</span>');
+            line = line.replace(/\b(int|void|char|return|if|else)\b/g, '<span class="keyword">$1</span>');
+            line = line.replace(/".*"/g, '<span class="string">$&</span>');
+            return line;
+        }
+
+        function reset() {
+            stepIdx = 0;
+            updateUI();
+            document.getElementById('log-panel').innerHTML = "<div>> Simulation loaded. Press 'Step Next' to begin.</div>";
+        }
+
+        function step() {
+            if (stepIdx < curScenario.steps.length - 1) {
+                stepIdx++;
+                updateUI();
+            } else {
+                log("End of simulation.");
+            }
+        }
+
+        function updateUI() {
+            const s = curScenario.steps[stepIdx];
+
+            // Highlight Line
+            document.querySelectorAll('.active-line').forEach(e => e.classList.remove('active-line'));
+            const lineEl = document.getElementById(`line-${s.line}`);
+            if (lineEl) lineEl.classList.add('active-line');
+
+            // Status
+            document.getElementById('status').innerText = s.action;
+            if (stepIdx > 0) log(s.action);
+
+            // Render Stack
+            const stackDiv = document.getElementById('stack-view');
+            if (s.stack === "SAME") return; // Keep previous state
+
+            stackDiv.innerHTML = '';
+
+            // Render frames Top-Down (High Addr to Low Addr typically, but let's visually stack them)
+            // We act like a stack: push adds to top of visual or bottom?
+            // Let's do: Top of screen = High Address (Bottom of Stack), Bottom of screen = Low Address (Top of Stack)
+            // Actually usually Stack Grows DOWN (High -> Low). So Top of Visual = High Address.
+
+            s.stack.forEach(frame => {
+                const frameDiv = document.createElement('div');
+                frameDiv.className = 'stack-frame';
+                frameDiv.innerHTML = `<div class="frame-header">${frame.name}</div>`;
+
+                frame.items.forEach(item => {
+                    const row = document.createElement('div');
+                    row.className = 'mem-block';
+
+                    const valClass = item.highlight ? 'mem-val val-changed' : 'mem-val';
+                    const styleClass = item.style ? item.style : '';
+
+                    row.innerHTML = `
+                    <div class="mem-addr">${item.addr || ''}</div>
+                    <div class="mem-name">${item.name}</div>
+                    <div class="${valClass} ${styleClass}">${item.val}</div>
+                `;
+                    frameDiv.appendChild(row);
+                });
+
+                stackDiv.appendChild(frameDiv);
+            });
+        }
+
+        function log(msg) {
+            const l = document.getElementById('log-panel');
+            l.innerHTML += `<div>> ${msg}</div>`;
+            l.scrollTop = l.scrollHeight;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>

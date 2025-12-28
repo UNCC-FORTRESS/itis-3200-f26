@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 12 Tool: Memory Lab</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            background: #212121;
+            color: #00e676;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+            border: 1px solid #00e676;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #00e676;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            font-weight: bold;
+            margin-right: 5px;
+            background: #212121;
+        }
+
+        .tab.active {
+            opacity: 1;
+            border-bottom: 3px solid #69f0ae;
+            background: #424242;
+            color: #fff;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        input {
+            padding: 8px;
+            background: #000;
+            border: 1px solid #00e676;
+            color: #00e676;
+            width: 300px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #00e676;
+            color: black;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .stack-view {
+            display: flex;
+            margin-top: 20px;
+            font-size: 0.9em;
+        }
+
+        .stack-block {
+            border: 1px solid #555;
+            padding: 10px;
+            width: 50px;
+            text-align: center;
+            background: #222;
+        }
+
+        .stack-label {
+            font-size: 0.7em;
+            color: #aaa;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .modified {
+            background: #b71c1c;
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Memory Hacking Suite</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="setTab('stack')">Variant A: Buffer Overflow</div>
+            <div class="tab" onclick="setTab('int')">Variant B: Int Overflow</div>
+            <div class="tab" onclick="setTab('fmt')">Variant C: Format String</div>
+        </div>
+
+        <!-- STACK -->
+        <div id="stack" class="content active">
+            <h3>Stack Buffer Overflow</h3>
+            <p>Code: <code>char name[8]; int score;</code></p>
+            <label>Name:</label> <input type="text" id="bfInput" placeholder="Enter Name..." maxlength="12">
+            <button onclick="runBf()">Submits (gets)</button>
+
+            <div style="margin-top:20px;">Memory Layout:</div>
+            <div class="stack-view" id="bfMem">
+                <!-- 8 Bytes Name -->
+            </div>
+            <h2 id="bfScore">Score: 0</h2>
+        </div>
+
+        <!-- INT -->
+        <div id="int" class="content">
+            <h3>Integer Overflow (8-bit)</h3>
+            <p>Balance: $100. Fee: $60 (Fixed).</p>
+            <p>Rule: Withdrawal + Fee must be <= 255 (Max 8-bit). If> 255, it wraps.</p>
+            <label>Withdraw Amount:</label> <input type="number" id="intInput" value="200">
+            <button onclick="runInt()">Withdraw</button>
+            <div id="intLog" style="margin-top:10px; padding:10px; border:1px dashed #666;"></div>
+        </div>
+
+        <!-- FMT -->
+        <div id="fmt" class="content">
+            <h3>Format String Leak</h3>
+            <p>Code: <code>printf(user_input);</code></p>
+            <p>Stack contains: <code>[RetAddr] [Var1] [SECRET_PASS]</code></p>
+            <label>Input:</label> <input type="text" id="fmtInput" value="%x %x %s">
+            <button onclick="runFmt()">Print</button>
+            <div class="stack-view" style="margin-bottom:10px;">
+                <div class="stack-block" style="width:100px;">Arg 1<br>(RetAddr)</div>
+                <div class="stack-block" style="width:100px;">Arg 2<br>(TempVar)</div>
+                <div class="stack-block" style="width:100px;">Arg 3<br>(Secret*)</div>
+            </div>
+            <div id="fmtOut" style="background:#000; padding:10px; min-height:50px;">Output: </div>
+        </div>
+    </div>
+
+    <script>
+        function setTab(id) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        /* --- STACK --- */
+        function runBf() {
+            const val = document.getElementById('bfInput').value;
+            const container = document.getElementById('bfMem');
+            container.innerHTML = "";
+            let score = 0;
+
+            // Name Buffer (8 bytes)
+            for (let i = 0; i < 8; i++) {
+                const charCode = i < val.length ? val.charCodeAt(i) : 0;
+                const d = document.createElement('div');
+                d.className = 'stack-block';
+                d.innerHTML = `<span class="stack-label">Name[${i}]</span>${charCode.toString(16).toUpperCase()}`;
+                container.appendChild(d);
+            }
+
+            // Score Buffer (2 bytes for demo)
+            const scoreContainer = document.createElement('div');
+            scoreContainer.className = 'stack-block modified';
+            scoreContainer.style.width = "80px";
+
+            let hexScore = "0000";
+            if (val.length > 8) {
+                // Overflow logic
+                let byte1 = val.charCodeAt(8) || 0;
+                let byte2 = val.charCodeAt(9) || 0;
+                // Little Endian visual: Byte2 Byte1
+                score = (byte2 << 8) | byte1;
+                hexScore = score.toString(16).toUpperCase();
+            }
+
+            scoreContainer.innerHTML = `<span class="stack-label">int score</span>0x${hexScore}`;
+            container.appendChild(scoreContainer);
+
+            document.getElementById('bfScore').innerText = `Score: ${score}`;
+        }
+
+        /* --- INT --- */
+        function runInt() {
+            const amt = parseInt(document.getElementById('intInput').value);
+            const fee = 60;
+            const bal = 100;
+            const log = document.getElementById('intLog');
+
+            const rawTotal = amt + fee;
+            const wrappedTotal = rawTotal % 256; // 8-bit wrap
+
+            let fail = rawTotal > 255; // In reality, the CPU just wraps.
+
+            log.innerHTML = `Calculation:<br>
+            Request: ${amt} + Fee: ${fee} = ${rawTotal}<br>
+            8-bit Value: ${rawTotal} % 256 = <strong>${wrappedTotal}</strong><br>
+            Check: ${wrappedTotal} <= Balance (${bal})? <br>`;
+
+            if (wrappedTotal <= bal) {
+                log.innerHTML += `<span style="color:#0f0; font-size:1.5em;">APPROVED! (Overflow Exploit Success)</span>`;
+            } else {
+                log.innerHTML += `<span style="color:red; font-size:1.5em;">DENIED. (Funds Insufficient)</span>`;
+            }
+        }
+
+        /* --- FMT --- */
+        function runFmt() {
+            const secret = "PASS_8023";
+            const mem = [0xBFFFF, 0x1234, secret]; // Stack representation
+
+            const inp = document.getElementById('fmtInput').value;
+            let out = inp;
+
+            // Simulation
+            if (inp.includes("%x")) {
+                out = out.replace("%x", "bffff3a0").replace("%x", "1234");
+            }
+
+            // %s reads string from pointer. %2$s means 2nd arg? Simplified for simulated logic:
+            if (inp.includes("%s")) {
+                // If it hits the 3rd slot
+                if (inp.split('%').length > 3 || inp.includes("%3$s") || inp.includes("%s")) {
+                    out = out.replace("%s", secret).replace("%3$s", secret);
+                } else {
+                    out = out.replace("%s", "(Garbage)");
+                }
+            }
+
+            document.getElementById('fmtOut').innerText = "Output: " + out;
+        }
+    </script>
+</body>
+
+</html>

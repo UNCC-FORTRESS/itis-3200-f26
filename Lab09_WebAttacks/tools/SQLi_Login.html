@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 09 Tool: SQLi Login</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: 100px auto;
+            border: 1px solid #0f0;
+            padding: 40px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+
+        input {
+            background: #111;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 10px;
+            width: 80%;
+            margin-bottom: 20px;
+            font-family: inherit;
+        }
+
+        button {
+            background: #0f0;
+            color: black;
+            border: none;
+            padding: 10px 40px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: #0a0;
+        }
+
+        .log {
+            margin-top: 40px;
+            border-top: 1px dashed #0f0;
+            padding-top: 20px;
+            text-align: left;
+            font-size: 0.9em;
+            color: #aaa;
+        }
+
+        .query {
+            color: #fff;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" id="loginForm">
+        <h1>ADMIN LOGIN</h1>
+        <input type="text" id="user" placeholder="Username">
+        <input type="password" id="pass" placeholder="Password">
+        <br>
+        <button onclick="login()">AUTHENTICATE</button>
+
+        <div class="log" id="log">
+            Database Log:<br>
+            Waiting for input...
+        </div>
+    </div>
+
+    <div class="container" id="successPanel" style="display:none; border-color: gold; color: gold;">
+        <h1>ACCESS GRANTED</h1>
+        <p>Welcome, ADMIN.</p>
+        <p>Flag: SQL_INJECTION_MASTER</p>
+    </div>
+
+    <script>
+        function login() {
+            const u = document.getElementById('user').value;
+            const p = document.getElementById('pass').value;
+            const log = document.getElementById('log');
+
+            // SIMULATED SQL
+            // Vulnerable construction
+            // NOTE: In JS we verify login logic manually, but we simulate the SQL string for educational purpose.
+
+            const query = `SELECT * FROM users WHERE user = '${u}' AND pass = '${p}'`;
+
+            log.innerHTML = `Executing Query:<br><span class="query">${query}</span>`;
+
+            // Attack Logic logic
+            // 1. Tautology: ' OR '1'='1
+            // 2. Comment: admin' --
+
+            let bypass = false;
+
+            // Check for common SQLi patterns in input simulation
+            const logicCheck = query.toUpperCase();
+
+            // Simple RegEx simulation of SQL logic (Not a real DB engine!)
+            // A real engine evaluates logic. Here we look for tell-tale signs of successful injection for the lab.
+
+            if (logicCheck.includes("' OR '1'='1")) bypass = true;
+            if (logicCheck.includes("ADMIN' --") || logicCheck.includes("ADMIN'--")) bypass = true;
+            if (logicCheck.includes("ADMIN' #")) bypass = true;
+
+            // Normal check
+            if (u === 'admin' && p === 'complexPassword123') bypass = true; // correct Creds
+
+            if (bypass) {
+                setTimeout(() => {
+                    document.getElementById('loginForm').style.display = 'none';
+                    document.getElementById('successPanel').style.display = 'block';
+                }, 1000);
+            } else {
+                log.innerHTML += `<br><span style="color:red">RESULT: 0 Rows Returned. Access Denied.</span>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

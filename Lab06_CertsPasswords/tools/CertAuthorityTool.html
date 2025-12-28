@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 06 Tool: Certificate Authority</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #eceff1;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .panel {
+            flex: 1;
+            background: white;
+            padding: 15px;
+            border-radius: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        h3 {
+            border-bottom: 2px solid #546e7a;
+            padding-bottom: 5px;
+            color: #37474f;
+        }
+
+        input,
+        select {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .btn-gen {
+            background: #0288d1;
+            color: white;
+        }
+
+        .btn-trust {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-go {
+            background: #607d8b;
+            color: white;
+            width: auto;
+            float: right;
+        }
+
+        .browser-bar {
+            background: #cfd8dc;
+            padding: 10px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .lock-icon {
+            font-size: 24px;
+        }
+
+        .secure {
+            color: green;
+        }
+
+        .insecure {
+            color: red;
+        }
+
+        #log {
+            margin-top: 10px;
+            height: 100px;
+            overflow-y: auto;
+            background: #263238;
+            color: #cfd8dc;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+
+<body>
+    <div style="max-width:900px; margin:0 auto">
+        <h1>Simulated Browser & CA</h1>
+    </div>
+
+    <div class="container">
+        <!-- CA Management -->
+        <div class="panel">
+            <h3>1. Trusted Root Store</h3>
+            <p>Manage the CAs trusted by this browser.</p>
+            <input type="text" id="rootName" placeholder="Root CA Name (e.g. GlobalTrust)">
+            <button class="btn-trust" onclick="installRoot()">Install Root CA</button>
+            <div id="trustedList" style="margin-top:10px; font-size:0.9em; color:green;">
+                <strong>Trusted Roots:</strong><br>
+                (None)
+            </div>
+        </div>
+
+        <!-- Certificate Generation -->
+        <div class="panel">
+            <h3>2. Server Config</h3>
+            <p>Generate a Certificate for your site.</p>
+            <input type="text" id="cn" placeholder="Common Name (e.g. bank.com)">
+            <label>Issuer:</label>
+            <select id="issuerSelect">
+                <option value="Self">Self-Signed</option>
+            </select>
+            <button class="btn-gen" onclick="generateCert()">Generate & Install on Server</button>
+        </div>
+    </div>
+
+    <!-- Browser -->
+    <div
+        style="max-width:900px; margin:20px auto; background:white; padding:20px; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+        <h3>3. Browser</h3>
+        <div class="browser-bar">
+            <span id="lock" class="lock-icon insecure">🔓</span>
+            <input type="text" id="url" placeholder="https://" style="margin:0;">
+            <button class="btn-go" onclick="visit()">Go</button>
+        </div>
+        <div id="pageContent"
+            style="margin-top:20px; text-align:center; height:100px; padding-top:40px; color:#aaa; border:1px dashed #ccc;">
+            (Enter URL to visit)
+        </div>
+    </div>
+
+    <script>
+        let trustedRoots = [];
+        let serverCert = null; // { cn: "...", issuer: "..." }
+
+        function installRoot() {
+            const name = document.getElementById('rootName').value;
+            if (!name) return;
+            trustedRoots.push(name);
+
+            // Update UI
+            document.getElementById('trustedList').innerHTML = "<strong>Trusted Roots:</strong><br>" + trustedRoots.join("<br>");
+
+            // Update Select
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.innerText = name;
+            document.getElementById('issuerSelect').appendChild(opt);
+        }
+
+        function generateCert() {
+            const cn = document.getElementById('cn').value;
+            const issuer = document.getElementById('issuerSelect').value;
+            serverCert = { cn, issuer };
+            alert(`Certificate generated for ${cn}\nSigned by: ${issuer}`);
+        }
+
+        function visit() {
+            const inputUrl = document.getElementById('url').value.replace("https://", "").replace("/", "");
+            const lock = document.getElementById('lock');
+            const content = document.getElementById('pageContent');
+
+            if (!serverCert) {
+                content.innerText = "Error: Server has no certificate installed.";
+                return;
+            }
+
+            if (serverCert.cn !== inputUrl) {
+                lock.className = "lock-icon insecure";
+                lock.innerText = "⚠️";
+                content.innerHTML = `<span style='color:red; font-weight:bold'>MISMATCH ERROR</span><br>Cert is for ${serverCert.cn}, but you visited ${inputUrl}.`;
+                return;
+            }
+
+            // Trust Check
+            let trusted = false;
+            if (serverCert.issuer === "Self") {
+                trusted = false; // Self signed never trusted unless explicitly added (not supported here for simplicity)
+            } else if (trustedRoots.includes(serverCert.issuer)) {
+                trusted = true;
+            }
+
+            if (trusted) {
+                lock.className = "lock-icon secure";
+                lock.innerText = "🔒";
+                content.innerHTML = `<h1 style='color:green'>Welcome to ${serverCert.cn}</h1><p>Connection Secure.</p>`;
+            } else {
+                lock.className = "lock-icon insecure";
+                lock.innerText = "🔓";
+                content.innerHTML = `<h1 style='color:red'>NOT SECURE</h1><p>The Certificate Issuer '${serverCert.issuer}' is NOT trusted by your browser.</p>`;
+            }
+        }
+    </script>
+</body>
+
+</html>

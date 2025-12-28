@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 04 Tool: DH Visualizer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #e0f7fa;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+        }
+
+        .box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            flex: 1;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-top: 0;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0 15px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        .public-params {
+            text-align: center;
+            margin-bottom: 20px;
+            background: #fff;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #00796b;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background: #004d40;
+        }
+
+        .result {
+            margin-top: 15px;
+            font-weight: bold;
+            color: #d32f2f;
+            text-align: center;
+            font-size: 1.2em;
+        }
+
+        .formula {
+            font-size: 0.8em;
+            color: #666;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="public-params">
+        <h2>Public Parameters</h2>
+        Prime (p): <input type="number" id="p" value="23" style="width: 60px;">
+        Generator (g): <input type="number" id="g" value="5" style="width: 60px;">
+        <br><br>
+        <button onclick="calculate()">Perform Exchange</button>
+    </div>
+
+    <div class="container">
+        <!-- Alice -->
+        <div class="box">
+            <h2>Alice</h2>
+            <label>Secret Key (a):</label>
+            <input type="number" id="a" value="6">
+
+            <hr>
+            <div class="formula">Public A = g^a mod p</div>
+            <div>Calculated Public (A): <span id="pubA">?</span></div>
+            <br>
+            <div class="formula">Shared S = (Bob's B)^a mod p</div>
+            <div class="result" id="sharedA">?</div>
+        </div>
+
+        <!-- Bob -->
+        <div class="box">
+            <h2>Bob</h2>
+            <label>Secret Key (b):</label>
+            <input type="number" id="b" value="15">
+
+            <hr>
+            <div class="formula">Public B = g^b mod p</div>
+            <div>Calculated Public (B): <span id="pubB">?</span></div>
+            <br>
+            <div class="formula">Shared S = (Alice's A)^b mod p</div>
+            <div class="result" id="sharedB">?</div>
+        </div>
+    </div>
+
+    <script>
+        // Custom modular exponentiation for accuracy with small ints
+        function powerMod(base, exp, mod) {
+            let res = 1;
+            base = base % mod;
+            while (exp > 0) {
+                if (exp % 2 == 1) res = (res * base) % mod;
+                base = (base * base) % mod;
+                exp = Math.floor(exp / 2);
+            }
+            return res;
+        }
+
+        function calculate() {
+            const p = parseInt(document.getElementById('p').value);
+            const g = parseInt(document.getElementById('g').value);
+            const a = parseInt(document.getElementById('a').value);
+            const b = parseInt(document.getElementById('b').value);
+
+            // Calc Public Keys
+            const A = powerMod(g, a, p);
+            const B = powerMod(g, b, p);
+
+            document.getElementById('pubA').innerText = A;
+            document.getElementById('pubB').innerText = B;
+
+            // Calc Shared Keys (Swapped)
+            const sharedA = powerMod(B, a, p); // Alice uses Bob's B
+            const sharedB = powerMod(A, b, p); // Bob uses Alice's A
+
+            document.getElementById('sharedA').innerText = sharedA;
+            document.getElementById('sharedB').innerText = sharedB;
+        }
+    </script>
+</body>
+
+</html>

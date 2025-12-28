@@ -1,0 +1,38 @@
+
+ITIS 6200: Lab Submission Guidelines & Academic Integrity Policy
+1. Purpose of Labs
+The primary goal of these labs is to move beyond theory and allow you to experience the security principles discussed in class. These are not tests of your programming proficiency; they are interactions designed to visualize concepts like encryption, hashing, and randomness and all the other parts of the course beyond discussions.Because these labs are a significant component of your final grade, strict adherence to the following guidelines is required.
+2. Submission Format
+File Type: All lab reports must be submitted as a single Microsoft Word Document (.docx). Do not submit raw code files (.py, .cpp) or loose images unless explicitly requested in a specific lab.
+Naming Convention: Please name your file: [FirstName]_[LastName]_Lab[#].docx
+Example: Jian_ Xiang _Lab1.docx
+3. Mandatory Screenshot Standards
+To ensure authenticity, we enforce a strict "Full Desktop" screenshot policy. Snippets, cropped images, or "active window only" screenshots will be rejected.
+Windows Users: Screenshots must include the entire desktop AND the Taskbar (showing the clock and open applications).
+macOS Users: Screenshots must include the entire desktop AND the Menu Bar at the top of the screen (showing the clock and Apple menu).
+Linux Users: Screenshots must include the entire desktop AND the System Menu / Tool Tray.
+Marking Up Screenshots:
+Unless otherwise specified, use a Red Box to highlight your unique input parameters (Name/ID).
+Use a Yellow Highlighter to mark the relevant output or answer.
+
+
+4. AI & Tool Usage Policy
+We recognize the changing landscape of technology. Our policy on Artificial Intelligence (ChatGPT, Claude, Gemini, Copilot, etc.) is as follows:
+You ARE ALLOWED to use LLMs or agentic coding platforms to write the scripts required for these labs. This course tests your security knowledge, not your ability to memorize Python syntax.
+The condition being that you must understand what the code actually does. If a question asks "Why did this happen?", implying "Because the AI code made it happen" is not acceptable. You must be able to explain the underlying security principle (e.g., "The code failed because ECB mode is deterministic"). We strongly suggest you try to come up with answers to critical thinking related questions on your own rather than relying on AI tools as this will help you understand concepts better and be prepared.
+You MUST understand the risk of using these tools for a real world use case like this, any errors or hallucination induced incorrect segment of your submission is something only you are liable for, these tools are simply “tools”
+You may be asked to explain a parts of your submission in case of suspicious material. Failure to explain your own submission will be treated as an integrity violation.
+
+5. Academic Integrity & Anti-Plagiarism
+We utilize automated tools to ensure fairness for all students.
+Forensics: We process the metadata and perceptual hashes of every image submitted. If you submit a screenshot found in another student's submission (past or present) or from an online source, it will be flagged immediately. Submission of tampered screenshots unless asked to markup is strictly disallowed, in cases of any overlapping submissions, you might be asked to present your original screenshot file to determine the legitimacy of your submission.
+Parameters: Every lab requires inputs derived from your specific Name and Student ID. Submitting a lab with someone else's parameters (or generic "Example" parameters) is a direct admission of copying and will result in a zero. The rules are simple to follow to guarantee the originality of your work.
+Recycling Work: Using past submissions—regardless of authorship—to answer any current Lab or Project is a direct violation of the University’s Malpractice Policy.
+Any form of malpractice will not be tolerated and will be reported according to university guidelines.
+
+6. Need Help?
+If you are stumped, ASK FOR HELP.
+Attend office hours, asking the TA or Professor for guidance does not deduct marks.
+It is always better to say, “I am stuck on Step 3,” or “I don’t know where/how to start” than to copy a classmate's result.
+Asking questions helps you understand the topic better and ensures you get the grade you deserve.
+

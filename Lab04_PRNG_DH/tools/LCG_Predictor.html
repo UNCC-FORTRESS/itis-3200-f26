@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 04 Tool: LCG Predictor</title>
+    <style>
+        body {
+            font-family: 'Consolas', monospace;
+            padding: 20px;
+            background: #333;
+            color: #0f0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #222;
+            padding: 20px;
+            border: 1px solid #444;
+        }
+
+        input {
+            background: #111;
+            border: 1px solid #555;
+            color: #fff;
+            padding: 5px;
+            width: 60px;
+            font-family: inherit;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #d32f2f;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #b71c1c;
+        }
+
+        .output {
+            margin-top: 20px;
+            border-top: 1px dashed #666;
+            padding-top: 10px;
+        }
+
+        .row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .index {
+            color: #888;
+        }
+
+        .val {
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>LCG Stream Generator</h1>
+        <p>Formula: X_next = (A * X_prev + C) % M</p>
+
+        <div>A: <input type="number" id="A" value="17"></div>
+        <div style="margin-top:5px">C: <input type="number" id="C" value="43"></div>
+        <div style="margin-top:5px">M: <input type="number" id="M" value="100"></div>
+        <div style="margin-top:5px">Seed (X0): <input type="number" id="seed" value="0"></div>
+
+        <button onclick="generate()">Generate Stream</button>
+
+        <div class="output" id="output">
+            <!-- Results -->
+        </div>
+    </div>
+
+    <script>
+        function generate() {
+            const A = parseInt(document.getElementById('A').value);
+            const C = parseInt(document.getElementById('C').value);
+            const M = parseInt(document.getElementById('M').value);
+            let X = parseInt(document.getElementById('seed').value);
+
+            const out = document.getElementById('output');
+            out.innerHTML = '';
+
+            for (let i = 0; i < 20; i++) {
+                // Calculate NEXT
+                let nextX = (A * X + C) % M;
+
+                const div = document.createElement('div');
+                div.className = 'row';
+                div.innerHTML = `<span class="index">X_${i} -> X_${i + 1}</span> <span class="val">${X} -> ${nextX}</span>`;
+                out.appendChild(div);
+
+                X = nextX;
+            }
+        }
+    </script>
+</body>
+
+</html>

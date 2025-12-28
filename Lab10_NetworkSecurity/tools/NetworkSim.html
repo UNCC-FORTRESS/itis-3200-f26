@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 10 Tool: Network Sim</title>
+    <style>
+        body {
+            font-family: 'Consolas', monospace;
+            padding: 20px;
+            background: #000;
+            color: #0f0;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #0f0;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #111;
+            border: 1px solid #333;
+            color: #888;
+        }
+
+        .tab.active {
+            background: #0f0;
+            color: #000;
+            font-weight: bold;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 20px;
+        }
+
+        .panel {
+            border: 1px solid #333;
+            padding: 10px;
+            flex: 1;
+            min-height: 200px;
+        }
+
+        button {
+            background: #333;
+            color: white;
+            border: 1px solid #0f0;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-family: inherit;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #444;
+        }
+
+        button.attack-btn {
+            background: #b71c1c;
+            color: white;
+            font-weight: bold;
+        }
+
+        .log-area {
+            height: 300px;
+            overflow-y: auto;
+            background: #111;
+            border: 1px solid #444;
+            padding: 5px;
+            font-size: 0.8em;
+        }
+
+        .packet {
+            margin-bottom: 2px;
+        }
+
+        .dropped {
+            color: red;
+        }
+
+        .accepted {
+            color: #0f0;
+        }
+
+        .meter {
+            height: 20px;
+            background: #333;
+            width: 100%;
+            position: relative;
+        }
+
+        .meter-fill {
+            height: 100%;
+            background: #0f0;
+            width: 0%;
+            transition: width 0.2s, background 0.2s;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('attacker')">Mode: ATTACKER (DoS)</div>
+        <div class="tab" onclick="switchTab('firewall')">Mode: FIREWALL</div>
+    </div>
+
+    <!-- ATTACKER DISPLAY -->
+    <div id="attacker" class="content active">
+        <div class="dashboard">
+            <div class="panel" style="flex:0 0 300px;">
+                <h3>Botnet Command</h3>
+                Target: <input type="text" value="10.0.0.80"
+                    style="background:#000; color:#fff; border:1px solid #0f0;"><br><br>
+                Type:
+                <select id="attackType" style="background:#000; color:#fff;">
+                    <option value="PING">ICMP Ping (Normal)</option>
+                    <option value="SLOW">HTTP Slow Loris</option>
+                    <option value="UDP">UDP Flood</option>
+                </select><br><br>
+                Intensity: <input type="range" id="intensity" min="1" max="100" value="10"><br><br>
+                <button class="attack-btn" onclick="toggleAttack()">TOGGLE ATTACK</button>
+            </div>
+            <div class="panel">
+                <h3>Target Status</h3>
+                Server Load:
+                <div class="meter">
+                    <div class="meter-fill" id="loadBar"></div>
+                </div>
+                <div id="statusText" style="text-align:center; margin-top:10px; font-size:1.5em; font-weight:bold;">
+                    ONLINE</div>
+                <hr>
+                PPS: <span id="pps">0</span> (Packets/Sec)<br>
+                Latency: <span id="latency">15</span>ms
+            </div>
+        </div>
+    </div>
+
+    <!-- FIREWALL DISPLAY -->
+    <div id="firewall" class="content">
+        <div class="dashboard">
+            <div class="panel">
+                <h3>Rules</h3>
+                Action: <select id="ruleAction">
+                    <option>DENY</option>
+                    <option>ALLOW</option>
+                </select>
+                Src IP: <input type="text" id="ruleSrc" placeholder="192.168.1.XX">
+                Dst Port: <input type="text" id="rulePot" placeholder="80">
+                <button onclick="addRule()">+ Add Rule</button>
+                <hr>
+                <div id="ruleList">
+                    <div>1. ALLOW ALL (Default)</div>
+                </div>
+            </div>
+            <div class="panel" style="flex:2;">
+                <h3>Live Packet Capture</h3>
+                <button onclick="toggleTraffic()">Start/Stop Traffic</button>
+                <div class="log-area" id="packetLog"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // TAB LOGIC
+        function switchTab(t) {
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.content').forEach(x => x.classList.remove('active'));
+            if (t === 'attacker') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('attacker').classList.add('active');
+            } else {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('firewall').classList.add('active');
+            }
+        }
+
+        // ATTACKER LOGIC
+        let attacking = false;
+        let attackInterval;
+        let checkInterval;
+
+        function toggleAttack() {
+            attacking = !attacking;
+            const btn = document.querySelector('.attack-btn');
+
+            if (attacking) {
+                btn.innerText = "STOP ATTACK";
+                btn.style.background = "#fff";
+                btn.style.color = "#b71c1c";
+                startSimulation();
+            } else {
+                btn.innerText = "START ATTACK";
+                btn.style.background = "#b71c1c";
+                btn.style.color = "#fff";
+                stopSimulation();
+            }
+        }
+
+        function startSimulation() {
+            checkInterval = setInterval(() => {
+                const type = document.getElementById('attackType').value;
+                const intensity = parseInt(document.getElementById('intensity').value);
+                const loadBar = document.getElementById('loadBar');
+                const status = document.getElementById('statusText');
+                const pps = document.getElementById('pps');
+
+                let load = 5;
+                let pkt = 10;
+
+                if (type === 'UDP') {
+                    pkt = intensity * 500;
+                    load = intensity; // 1-100
+                } else if (type === 'SLOW') {
+                    pkt = intensity * 10;
+                    load = intensity * 0.8;
+                }
+
+                // Update UI
+                pps.innerText = Math.floor(pkt + Math.random() * 50);
+                loadBar.style.width = load + "%";
+
+                if (load < 50) {
+                    loadBar.style.background = "#0f0";
+                    status.innerText = "ONLINE";
+                    status.style.color = "#0f0";
+                } else if (load < 90) {
+                    loadBar.style.background = "orange";
+                    status.innerText = "HIGH LOAD";
+                    status.style.color = "orange";
+                } else {
+                    loadBar.style.background = "red";
+                    status.innerText = "SERVER CRASH / OFFLINE";
+                    status.style.color = "red";
+                }
+            }, 500);
+        }
+
+        function stopSimulation() {
+            clearInterval(checkInterval);
+            document.getElementById('loadBar').style.width = "5%";
+            document.getElementById('loadBar').style.background = "#0f0";
+            document.getElementById('statusText').innerText = "ONLINE";
+            document.getElementById('pps').innerText = "0";
+        }
+
+        // FIREWALL LOGIC
+        let rules = []; // { action: 'DENY', src: '...', port: '...' }
+        let trafficInterval;
+
+        function addRule() {
+            const action = document.getElementById('ruleAction').value;
+            const src = document.getElementById('ruleSrc').value;
+            const port = document.getElementById('rulePot').value;
+
+            rules.unshift({ action, src, port }); // Add to top match logic generally works top down, but we push for simple
+            // Actually usually top down. Let's unshift (add to top).
+
+            renderRules();
+        }
+
+        function renderRules() {
+            const list = document.getElementById('ruleList');
+            list.innerHTML = '';
+            rules.forEach((r, i) => {
+                list.innerHTML += `<div>${i + 1}. ${r.action} Src:${r.src} Port:${r.port}</div>`;
+            });
+            list.innerHTML += `<div style='color:#666'>${rules.length + 1}. ACCEPT ALL (Implicit)</div>`;
+        }
+
+        function toggleTraffic() {
+            if (trafficInterval) {
+                clearInterval(trafficInterval);
+                trafficInterval = null;
+                return;
+            }
+
+            const log = document.getElementById('packetLog');
+            trafficInterval = setInterval(() => {
+                // Generate random packet
+                const srcs = ["192.168.1.10", "192.168.1.50", "10.0.0.5"];
+                // Inject the user's blocked IP occasionally
+                if (Math.random() > 0.5) srcs.push(document.getElementById('ruleSrc').value || "192.168.1.99");
+
+                const src = srcs[Math.floor(Math.random() * srcs.length)];
+                const port = Math.random() > 0.5 ? "80" : "443";
+
+                // Check Rules
+                let decision = "ACCEPTED";
+                let color = "accepted";
+
+                // Simple Logic: Check Deny Rules First
+                for (let r of rules) {
+                    if (r.action === 'DENY') {
+                        if (r.src && src.includes(r.src)) { decision = "DROPPED"; color = "dropped"; break; }
+                        // Simple match
+                    }
+                }
+
+                const div = document.createElement('div');
+                div.className = `packet ${color}`;
+                div.innerText = `[${decision}] Src:${src} -> Dst:10.0.0.1:${port}`;
+                log.prepend(div);
+                if (log.children.length > 50) log.lastChild.remove();
+            }, 500);
+        }
+    </script>
+</body>
+
+</html>

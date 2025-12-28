@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 12 Tool: Stack Smasher</title>
+    <style>
+        body {
+            font-family: 'Consolas', monospace;
+            padding: 20px;
+            background: #263238;
+            color: white;
+            display: flex;
+            gap: 20px;
+        }
+
+        .controls {
+            width: 300px;
+            background: #37474f;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .memory {
+            flex: 1;
+            background: #000;
+            padding: 20px;
+            border: 1px solid #546e7a;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            background: #263238;
+            color: white;
+            border: 1px solid #78909c;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background: #ff5722;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .stack-frame {
+            display: flex;
+            flex-direction: column-reverse;
+            width: 200px;
+            margin: 0 auto;
+            border: 2px solid white;
+        }
+
+        .block {
+            padding: 15px;
+            text-align: center;
+            border-bottom: 1px dashed #78909c;
+            position: relative;
+        }
+
+        .block label {
+            display: block;
+            font-size: 0.7em;
+            color: #ffca28;
+            margin-bottom: 5px;
+        }
+
+        .block .val {
+            font-size: 1.2em;
+            word-break: break-all;
+        }
+
+        .highlight {
+            background: #b71c1c;
+            transition: background 0.5s;
+        }
+
+        .ret-ok {
+            background: #2e7d32;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="controls">
+        <h3>Input Buffer (char[8])</h3>
+        <p>Type content to copy into buffer.</p>
+        <input type="text" id="asciiInput" placeholder="ASCII Input (e.g. AAAA)">
+        <button onclick="exec(false)">Execute (ASCII)</button>
+        <hr>
+        <input type="text" id="hexInput" placeholder="HEX Input (e.g. 41414141)">
+        <button onclick="exec(true)">Execute (HEX)</button>
+
+        <div id="status" style="margin-top:20px; font-weight:bold;"></div>
+    </div>
+
+    <div class="memory">
+        <h3 style="text-align:center">Stack Frame (High Addr -> Low Addr)</h3>
+        <div class="stack-frame">
+            <!-- Top of stack (Low Addr) is input buffer -->
+            <!-- But visually we usually put High Addr at top? or Bottom? -->
+            <!-- Stack grows DOWN. So Bottom is Low Addr. -->
+            <!-- Let's visualize: 
+                 [ RET  ] High Addr
+                 [ EBP  ]
+                 [ BUFF ] Low Addr (Start of write)
+            -->
+
+            <div class="block ret-ok" id="blk_ret">
+                <label>RETURN ADDRESS (4 Bytes)</label>
+                <div class="val" id="val_ret">0x08048400</div>
+            </div>
+            <div class="block" id="blk_ebp">
+                <label>SAVED EBP (4 Bytes)</label>
+                <div class="val" id="val_ebp">0xFFFFAABB</div>
+            </div>
+            <div class="block" id="blk_buf">
+                <label>BUFFER (8 Bytes)</label>
+                <div class="val" id="val_buf">[EMPTY]</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function exec(isHex) {
+            let input = "";
+            let rawHex = "";
+
+            if (isHex) {
+                rawHex = document.getElementById('hexInput').value;
+                // Convert hex to string for display, but keep raw bytes logic
+                // For sim, we mostly care about length
+                // 2 hex chars = 1 byte
+            } else {
+                input = document.getElementById('asciiInput').value;
+                // Convert to hex
+                for (let i = 0; i < input.length; i++) {
+                    rawHex += input.charCodeAt(i).toString(16).padStart(2, '0');
+                }
+            }
+
+            // Simulation Logic
+            // Buffer is 8 bytes (16 hex chars)
+            // EBP is 4 bytes (8 hex chars)
+            // RET is 4 bytes (8 hex chars)
+
+            const bufSize = 16;
+            const ebpSize = 8;
+
+            const bufHex = rawHex.substring(0, bufSize).padEnd(bufSize, '.'); // just for visual if short
+            const ebpHex = rawHex.substring(bufSize, bufSize + ebpSize);
+            const retHex = rawHex.substring(bufSize + ebpSize, bufSize + ebpSize + 8);
+
+            // Update UI
+            document.getElementById('val_buf').innerText = formatHex(rawHex.substring(0, bufSize)) || "[EMPTY]";
+
+            if (ebpHex.length > 0) {
+                document.getElementById('val_ebp').innerText = formatHex(ebpHex);
+                document.getElementById('blk_ebp').className = "block highlight";
+            } else {
+                document.getElementById('val_ebp').innerText = "0xFFFFAABB";
+                document.getElementById('blk_ebp').className = "block";
+            }
+
+            if (retHex.length > 0) {
+                document.getElementById('val_ret').innerText = "0x" + reverseEndian(retHex).toUpperCase();
+                document.getElementById('blk_ret').className = "block highlight";
+                document.getElementById('status').innerText = "SEGFAULT / RETURN CORRUPTED!";
+                document.getElementById('status').style.color = "red";
+            } else {
+                document.getElementById('val_ret').innerText = "0x08048400";
+                document.getElementById('blk_ret').className = "block ret-ok";
+                document.getElementById('status').innerText = "Execution Normal.";
+                document.getElementById('status').style.color = "#0f0";
+            }
+        }
+
+        function formatHex(h) {
+            // Group by 2
+            return h.match(/.{1,2}/g)?.join(' ') || h;
+        }
+
+        // Little Endian visualizer (Show bytes as they would form a pointer)
+        // Actually, just showing raw bytes is fine, but usually people want to see if they formed 0xDEADBEEF
+        // For input: EF BE AD DE -> 0xDEADBEEF
+        function reverseEndian(h) {
+            if (h.length % 2 !== 0) h = "0" + h;
+            const bytes = h.match(/.{1,2}/g);
+            if (!bytes) return h;
+            return bytes.reverse().join('');
+        }
+    </script>
+</body>
+
+</html>

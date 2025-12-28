@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 12 Tool: Bank Overflow</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #e0f2f1;
+            text-align: center;
+        }
+
+        .atm {
+            background: #004d40;
+            color: white;
+            width: 400px;
+            margin: 0 auto;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+
+        .screen {
+            background: #b2dfdb;
+            color: #004d40;
+            padding: 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            font-family: monospace;
+            font-size: 1.2em;
+            text-align: left;
+        }
+
+        input {
+            font-size: 1.2em;
+            padding: 10px;
+            width: 200px;
+            text-align: center;
+            border: none;
+            border-radius: 4px;
+        }
+
+        button {
+            font-size: 1.2em;
+            padding: 10px 20px;
+            background: #ffab00;
+            color: black;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            display: block;
+            margin: 10px auto;
+        }
+
+        button:hover {
+            background: #ffd740;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="atm">
+        <h2>Secure Bank ATM</h2>
+        <div class="screen">
+            WELCOME USER.<br>
+            <br>
+            BALANCE: $<span id="bal">100</span><br>
+            <br>
+            <span id="msg">Enter Transfer Amount...</span>
+        </div>
+
+        <input type="number" id="amt" placeholder="Amount">
+        <button onclick="transfer()">TRANSFER</button>
+    </div>
+
+    <script>
+        let balance = 100;
+
+        function transfer() {
+            const amtStr = document.getElementById('amt').value;
+            const amt = parseInt(amtStr); // Signed Integer
+            const msg = document.getElementById('msg');
+
+            // Vulnerable Logic
+            // The check is doing "if (amt > balance)"
+            // Usually negative numbers bypass this easily if logic is not robust
+
+            if (amt > balance) {
+                msg.innerText = "ERROR: Insufficient Funds.";
+                msg.style.color = "red";
+                return;
+            }
+
+            // Perform Transaction
+            balance = balance - amt;
+
+            document.getElementById('bal').innerText = balance;
+            msg.innerText = "SUCCESS: Transferred $" + amt;
+            msg.style.color = "green";
+        }
+    </script>
+</body>
+
+</html>

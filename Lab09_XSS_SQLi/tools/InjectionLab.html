@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 09 Tool: Injection Lab</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #fff8e1;
+            color: #3e2723;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ffca28;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            opacity: 1;
+            border-bottom: 3px solid #ffa000;
+            background: #fff8e1;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid #ffb300;
+            width: 300px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #ffa000;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .code-box {
+            background: #263238;
+            color: #80cbc4;
+            padding: 10px;
+            font-family: monospace;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+
+        .result-area {
+            border: 1px solid #ccc;
+            padding: 20px;
+            margin-top: 10px;
+            min-height: 50px;
+            background: #fafafa;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div
+            style="background: #e1f5fe; padding: 10px; border: 1px solid #0288d1; margin-bottom: 10px; border-radius: 4px;">
+            <strong>Student Identity (SIP):</strong> <input type="text" id="sipName"
+                placeholder="Enter Name/ID for Screenshots" style="width: 200px;">
+        </div>
+
+        <h1>Injection Lab Suites</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="setTab('xss')">Variant A: XSS</div>
+            <div class="tab" onclick="setTab('sqli-login')">Variant B: SQLi Login</div>
+            <div class="tab" onclick="setTab('sqli-union')">Variant C: SQLi Search</div>
+        </div>
+
+        <!-- XSS -->
+        <div id="xss" class="content active">
+            <h3>Reflected XSS Simulator</h3>
+            <p>Enter text to search. Note: Input is NOT sanitized.</p>
+            <input type="text" id="xssInput" placeholder="Search...">
+            <button onclick="runXSS()">Search</button>
+
+            <div class="result-area" id="xssRes">
+                <!-- Content injected here -->
+            </div>
+            <div class="code-box" id="xssCode">HTML: &lt;div&gt;You searched for: <span id="xssRaw"></span>&lt;/div&gt;
+            </div>
+        </div>
+
+        <!-- SQL LOGIN -->
+        <div id="sqli-login" class="content">
+            <h3>SQL Login Bypass</h3>
+            <p>Target User: <code>admin</code></p>
+            <label>User:</label> <input type="text" id="sqlUser"><br><br>
+            <label>Pass:</label> <input type="password" id="sqlPass"><br><br>
+            <button onclick="runLogin()">Login</button>
+
+            <div class="code-box" id="loginQuery">Query: SELECT * FROM users WHERE user = '?' AND pass = '?'</div>
+            <div id="loginRes" class="result-area">Status: Waiting...</div>
+        </div>
+
+        <!-- SQL UNION -->
+        <div id="sqli-union" class="content">
+            <h3>SQL Union Attack</h3>
+            <p>Database has tables: <code>products</code> (name, price) and <code>users</code> (user, password).</p>
+            <input type="text" id="unionInput" placeholder="Product Name (e.g., Apple)">
+            <button onclick="runUnion()">Search</button>
+
+            <div class="code-box" id="unionQuery">Query: SELECT name, price FROM products WHERE name LIKE '%?%'</div>
+            <table border="1" style="width:100%; margin-top:10px;" id="unionTable">
+                <tr>
+                    <th>Name</th>
+                    <th>Price</th>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        function setTab(id) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        /* --- XSS --- */
+        function runXSS() {
+            const val = document.getElementById('xssInput').value;
+            const target = document.getElementById('xssRes');
+            const code = document.getElementById('xssRaw');
+            const sip = document.getElementById('sipName').value || "Unknown";
+
+            target.innerHTML = `You searched for: ${val} <br><small style='color:grey'>User: ${sip}</small>`;
+            code.innerText = val;
+
+            // Eval script tags manually for the simulator because innerHTML blocking
+            if (val.includes("<script>")) {
+                const content = val.substring(val.indexOf("<script>") + 8, val.indexOf("<\\/script>"));
+                if (content.includes("alert")) {
+                    const msg = content.match(/alert\('(.+)'\)/)[1];
+                    alert(msg);
+                }
+            }
+        }
+
+        /* --- LOGIN --- */
+        function runLogin() {
+            const u = document.getElementById('sqlUser').value;
+            const p = document.getElementById('sqlPass').value;
+
+            // Build Query string for display
+            const q = `SELECT * FROM users WHERE user = '${u}' AND pass = '${p}'`;
+            document.getElementById('loginQuery').innerText = "Query: " + q;
+
+            // Logic: Check for ' OR 1=1 --
+            // If user string contains ' OR 1=1, return success
+            const res = document.getElementById('loginRes');
+
+            if (u === 'admin' && p === 'password') {
+                res.innerHTML = "<span style='color:green'>Login Success (Normal)</span>";
+            } else if (u.includes("' OR 1=1")) {
+                res.innerHTML = "<span style='color:green; font-weight:bold;'>LOGIN SUCCESS (INJECTION BYPASS)</span><br>Welcome, Admin.";
+            } else {
+                res.innerHTML = "<span style='color:red'>Login Failed</span>";
+            }
+        }
+
+        /* --- UNION --- */
+        function runUnion() {
+            const val = document.getElementById('unionInput').value;
+            // Display Query
+            const q = `SELECT name, price FROM products WHERE name LIKE '%${val}%'`;
+            document.getElementById('unionQuery').innerText = "Query: " + q;
+
+            const table = document.getElementById('unionTable');
+            // Clear rows
+            while (table.rows.length > 1) table.deleteRow(1);
+
+            // Normal Logic
+            const products = [
+                { n: "Apple", p: "$1.00" },
+                { n: "Banana", p: "$0.50" },
+                { n: "Carrot", p: "$0.25" }
+            ];
+
+            products.forEach(prod => {
+                if (prod.n.toLowerCase().includes(val.toLowerCase()) && !val.includes("UNION")) {
+                    const r = table.insertRow();
+                    r.insertCell().innerText = prod.n;
+                    r.insertCell().innerText = prod.p;
+                }
+            });
+
+            // Injection Logic
+            if (val.includes("UNION SELECT") && val.includes("users")) {
+                // Return users as products
+                const r1 = table.insertRow();
+                r1.insertCell().innerText = "admin";
+                r1.insertCell().innerText = "pass123";
+                r1.style.background = "#ffccbc"; // Highlight
+
+                const r2 = table.insertRow();
+                r2.insertCell().innerText = "alice";
+                r2.insertCell().innerText = "secret99";
+                r2.style.background = "#ffccbc";
+            }
+        }
+    </script>
+</body>
+
+</html>

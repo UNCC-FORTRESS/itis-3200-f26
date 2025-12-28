@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 05 Tool: RSA Lab</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #fff3e0;
+            color: #e65100;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ff9800;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            opacity: 1;
+            border-bottom: 3px solid #ef6c00;
+            background: #fff3e0;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid #ffcc80;
+            width: 100px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #fb8c00;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #ef6c00;
+        }
+
+        .result-box {
+            background: #fff8e1;
+            padding: 15px;
+            border-left: 5px solid #ffa000;
+            margin-top: 20px;
+            font-family: monospace;
+        }
+
+        .block {
+            margin-bottom: 15px;
+            padding: 10px;
+            border: 1px dashed #ccc;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>RSA Lab Suites</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="setTab('basic')">Variant A: Encrypt (Keys)</div>
+            <div class="tab" onclick="setTab('sign')">Variant B: Signatures</div>
+            <div class="tab" onclick="setTab('mallory')">Variant C: Malleability</div>
+        </div>
+
+        <!-- BASIC -->
+        <div id="basic" class="content active">
+            <h3>Key Gen & Encryption</h3>
+            <div class="block">
+                <h4>1. Key Generation</h4>
+                <label>Prime P:</label> <input type="number" id="p" value="17">
+                <label>Prime Q:</label> <input type="number" id="q" value="11">
+                <label>e:</label> <input type="number" id="e" value="7">
+                <button onclick="genKeys()">Generate Keys</button>
+                <div id="keysRes" class="result-box">N=?, Phi=?, d=?</div>
+            </div>
+
+            <div class="block">
+                <h4>2. Encrypt / Decrypt</h4>
+                <label>Message (int):</label> <input type="number" id="msg" value="5">
+                <button onclick="encrypt()">Encrypt</button>
+                <button onclick="decrypt()">Decrypt</button>
+                <div id="encRes" class="result-box">Result: ?</div>
+            </div>
+        </div>
+
+        <!-- SIGN -->
+        <div id="sign" class="content">
+            <h3>Digital Signatures</h3>
+            <p>Using keys from Variant A (N, d).</p>
+            <div class="block">
+                <h4>Sign (Sender)</h4>
+                <label>Doc Hash:</label> <input type="number" id="signHash" value="50">
+                <button onclick="signMsg()">Sign</button>
+                <div id="signRes" class="result-box">Signature (S): ?</div>
+            </div>
+            <div class="block">
+                <h4>Verify (Receiver)</h4>
+                <label>Signature (S):</label> <input type="number" id="verifySig">
+                <button onclick="verifyMsg()">Verify</button>
+                <div id="verifyRes" class="result-box">Recovered Hash: ?</div>
+            </div>
+        </div>
+
+        <!-- MALLEABILITY -->
+        <div id="mallory" class="content">
+            <h3>Homomorphic Attack (Mallory)</h3>
+            <p>Mallory wants to change Alice's bid by a factor of X.</p>
+
+            <div class="block" style="background:#e8f5e9;">
+                <h4>Alice (Victim)</h4>
+                Bid: <input type="number" id="aliceBid" value="10">
+                <button onclick="aliceEncrypt()">Encrypt Bid</button>
+                <div id="aliceC" style="font-weight:bold;">C = ?</div>
+            </div>
+
+            <div class="block" style="background:#ffebee;">
+                <h4>Mallory (Attacker)</h4>
+                <label>Multiplier X:</label> <input type="number" id="malloryX" value="2">
+                <button onclick="malloryAttack()">Forge Ciphertext</button>
+                <div id="malloryC" style="font-weight:bold;">New C = ?</div>
+            </div>
+
+            <div class="block">
+                <h4>Auctioneer (Server)</h4>
+                <button onclick="serverDecrypt()">Decrypt New C</button>
+                <div id="finalBid" class="result-box">Decrypted Bid: ?</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global State for simplicity
+        let G = {
+            N: 0, d: 0, e: 0,
+            aliceC: 0
+        };
+
+        function setTab(id) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Math Helpers
+        function gcd(a, b) { return !b ? a : gcd(b, a % b); }
+        function modInverse(e, phi) {
+            let m0 = phi, t, q;
+            let x0 = 0, x1 = 1;
+            if (phi == 1) return 0;
+            while (e > 1) {
+                q = Math.floor(e / phi);
+                t = phi; phi = e % phi; e = t;
+                t = x0; x0 = x1 - q * x0; x1 = t;
+            }
+            if (x1 < 0) x1 += m0;
+            return x1;
+        }
+        function modExp(base, exp, mod) {
+            let res = 1;
+            base = base % mod;
+            while (exp > 0) {
+                if (exp % 2 === 1) res = (res * base) % mod;
+                exp = Math.floor(exp / 2);
+                base = (base * base) % mod;
+            }
+            return res;
+        }
+
+        /* --- BASIC --- */
+        function genKeys() {
+            const p = parseInt(document.getElementById('p').value);
+            const q = parseInt(document.getElementById('q').value);
+            const e = parseInt(document.getElementById('e').value);
+
+            const n = p * q;
+            const phi = (p - 1) * (q - 1);
+
+            if (gcd(e, phi) !== 1) return alert(`GCD(e, phi) must be 1. gcd(${e}, ${phi}) is ` + gcd(e, phi));
+
+            const d = modInverse(e, phi);
+
+            G.N = n; G.d = d; G.e = e; // Store for other tabs
+
+            document.getElementById('keysRes').innerText = `N = ${n}, Phi = ${phi}, d (Private) = ${d}`;
+        }
+
+        function encrypt() {
+            if (!G.N) return alert("Generate Keys First");
+            const m = parseInt(document.getElementById('msg').value);
+            const c = modExp(m, G.e, G.N);
+            document.getElementById('encRes').innerText = `Ciphertext c = ${c}`;
+        }
+
+        function decrypt() {
+            if (!G.N) return alert("Generate Keys First");
+            // For sim, let user input C or use last
+            const mStr = document.getElementById('encRes').innerText.split('= ')[1];
+            if (!mStr) return;
+            const c = parseInt(mStr);
+            const m = modExp(c, G.d, G.N);
+            document.getElementById('encRes').innerText += ` -> Decrypted m = ${m}`;
+        }
+
+        /* --- SIGN --- */
+        function signMsg() {
+            if (!G.N) return alert("Generate Keys First (Variant A)");
+            const m = parseInt(document.getElementById('signHash').value);
+            // Sign = m^d mod N
+            const s = modExp(m, G.d, G.N);
+            document.getElementById('signRes').innerText = `Signature S = ${s}`;
+        }
+
+        function verifyMsg() {
+            const s = parseInt(document.getElementById('verifySig').value);
+            // Verify = S^e mod N
+            const m = modExp(s, G.e, G.N);
+            const original = document.getElementById('signHash').value;
+            const isMatch = (m == original) ? "TRUE (Trusted)" : "FALSE (Forged)";
+            document.getElementById('verifyRes').innerText = `Recovered Hash: ${m}. Verified: ${isMatch}`;
+        }
+
+        /* --- MALLORY --- */
+        let malloryNewC = 0;
+
+        function aliceEncrypt() {
+            // Auto setup larger prime for Mallory demo to avoid small number wrapping
+            if (!G.N || G.N < 100) {
+                // Silent upgrade or alert? 
+                // Let's just use whatever keys user set, assuming they followed SIP
+                // If not, alert
+            }
+            if (!G.N) return alert("Generate Keys First");
+
+            const m = parseInt(document.getElementById('aliceBid').value);
+            G.aliceC = modExp(m, G.e, G.N);
+            document.getElementById('aliceC').innerText = `C = ${G.aliceC}`;
+        }
+
+        function malloryAttack() {
+            const x = parseInt(document.getElementById('malloryX').value);
+            // We want newC = Enc(m * x) = Enc(m) * Enc(x)
+            // Enc(x) = x^e mod N
+            const encX = modExp(x, G.e, G.N);
+            malloryNewC = (G.aliceC * encX) % G.N;
+            document.getElementById('malloryC').innerText = `New C = ${malloryNewC}`;
+        }
+
+        function serverDecrypt() {
+            const m = modExp(malloryNewC, G.d, G.N);
+            document.getElementById('finalBid').innerText = `Decrypted Bid: ${m}`;
+        }
+    </script>
+</body>
+
+</html>

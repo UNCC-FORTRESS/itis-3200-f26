@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 03 Tool: MiniHash Collider</title>
+    <style>
+        body {
+            font-family: 'Courier New', monospace;
+            padding: 20px;
+            background: #0f0f0f;
+            color: #00ff00;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            border: 1px solid #333;
+            padding: 20px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.2);
+        }
+
+        h1 {
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        input {
+            background: #222;
+            border: 1px solid #444;
+            color: #fff;
+            padding: 10px;
+            flex: 1;
+            font-family: inherit;
+        }
+
+        button {
+            background: #00aa00;
+            color: black;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            font-family: inherit;
+        }
+
+        button:hover {
+            background: #00cc00;
+        }
+
+        .log {
+            height: 300px;
+            overflow-y: auto;
+            background: #000;
+            border: 1px solid #333;
+            padding: 10px;
+            font-size: 14px;
+            margin-top: 20px;
+        }
+
+        .entry {
+            margin-bottom: 2px;
+            color: #555;
+        }
+
+        .highlight {
+            color: #fff;
+            background: #b22222;
+            padding: 5px;
+            margin: 10px 0;
+            border: 1px solid red;
+        }
+
+        .stats {
+            margin-top: 10px;
+            font-size: 18px;
+            color: #fff;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>MiniHash Collider (8-Bit)</h1>
+        <p>Target: Find 2 inputs with same Hash ($2^8$ space).</p>
+
+        <div class="input-group">
+            <input type="text" id="seed" placeholder="Enter Seed (e.g. Your Name)">
+            <button onclick="startCollision()">Find Collision</button>
+        </div>
+
+        <div class="stats" id="status">Ready.</div>
+        <div class="log" id="log"></div>
+    </div>
+
+    <script>
+        // Simple CRC32-like hash truncated to 8 bits (0-255)
+        function miniHash(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                let char = str.charCodeAt(i);
+                hash = ((hash << 5) - hash) + char;
+                hash = hash & hash; // Convert to 32bit integer
+            }
+            // Fold into 8 bits
+            return Math.abs(hash) % 256;
+        }
+
+        function toHex(num) {
+            return num.toString(16).toUpperCase().padStart(2, '0');
+        }
+
+        async function startCollision() {
+            const seed = document.getElementById('seed').value || "User";
+            const log = document.getElementById('log');
+            const status = document.getElementById('status');
+
+            log.innerHTML = '';
+            status.innerText = 'Calculating...';
+
+            const seen = {}; // Map Hash -> InputString
+            let counter = 0;
+            let found = false;
+
+            // Use interval to avoid freezing UI
+            let interval = setInterval(() => {
+                // Batch process 10 at a time for visual effect
+                for (let i = 0; i < 5; i++) {
+                    counter++;
+                    let inputStr = `${seed}_${counter}`;
+                    let hashVal = miniHash(inputStr);
+                    let hex = toHex(hashVal);
+
+                    // Visualize (Log matching color only to save DOM updates?)
+                    // Actually let's visualize all but fade them
+
+                    if (seen[hex]) {
+                        // COLLISION FOUND
+                        found = true;
+                        clearInterval(interval);
+
+                        let collisionDiv = document.createElement('div');
+                        collisionDiv.className = 'highlight';
+                        collisionDiv.innerHTML = `
+                            <strong>COLLISION FOUND!</strong><br>
+                            Input A: ${seen[hex]} -> Hash: 0x${hex}<br>
+                            Input B: ${inputStr} -> Hash: 0x${hex}<br>
+                            Attempts: ${counter}
+                        `;
+                        log.prepend(collisionDiv);
+                        status.innerText = `Collision found in ${counter} attempts!`;
+                        return;
+                    } else {
+                        seen[hex] = inputStr;
+                        // Add to log (limit to last 50 to save memory)
+                        let entry = document.createElement('div');
+                        entry.className = 'entry';
+                        entry.innerText = `${inputStr} -> 0x${hex}`;
+                        log.prepend(entry);
+                        if (log.children.length > 50) log.lastChild.remove();
+                    }
+                }
+            }, 50); // Speed
+        }
+    </script>
+</body>
+
+</html>

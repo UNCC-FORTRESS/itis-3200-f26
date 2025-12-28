@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Lab 13: System Execution & Assembly Simulator</title>
+    <style>
+        body {
+            font-family: 'Consolas', monospace;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            margin: 0;
+        }
+  
+        header {
+            background: #007acc;
+            color: white;
+            padding: 10px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .panel {
+            border-right: 1px solid #444;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        #code-panel {
+            flex: 1;
+            background: #252526;
+        }
+
+        #cpu-panel {
+            flex: 0.8;
+            background: #1e1e1e;
+        }
+
+        #memory-panel {
+            flex: 1.2;
+            background: #252526;
+        }
+
+        h3 {
+            border-bottom: 1px solid #555;
+            padding-bottom: 5px;
+            margin-top: 0;
+        }
+
+        .register-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            background: #333;
+            padding: 5px;
+            border-radius: 3px;
+        }
+
+        .reg-name {
+            color: #569cd6;
+            font-weight: bold;
+        }
+
+        .reg-val {
+            color: #ce9178;
+        }
+
+        .changed {
+            background-color: #5a3e1e;
+            transition: background 1s;
+        }
+
+        .mem-row {
+            display: flex;
+            border-bottom: 1px solid #333;
+            font-size: 0.9em;
+        }
+
+        .mem-addr {
+            width: 80px;
+            color: #888;
+            border-right: 1px solid #444;
+            padding: 2px;
+        }
+
+        .mem-val {
+            flex: 1;
+            padding: 2px 10px;
+            color: #9cdcfe;
+        }
+
+        .mem-label {
+            width: 100px;
+            color: #6a9955;
+            font-style: italic;
+            padding: 2px;
+            text-align: right;
+        }
+
+        .stack-ptr {
+            background: #264f78;
+        }
+
+        .instruction {
+            padding: 2px;
+            cursor: pointer;
+        }
+
+        .instruction.active {
+            background: #264f78;
+            color: white;
+        }
+
+        .instruction:hover {
+            background: #3e3e42;
+        }
+
+        #controls {
+            padding: 10px;
+            background: #333;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 8px 15px;
+            cursor: pointer;
+            background: #0e639c;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+
+        button:hover {
+            background: #1177bb;
+        }
+
+        button:disabled {
+            background: #555;
+            cursor: not-allowed;
+        }
+
+        select {
+            background: #3c3c3c;
+            color: white;
+            padding: 5px;
+            border: 1px solid #555;
+        }
+
+        #log {
+            height: 100px;
+            background: black;
+            color: #00ff00;
+            overflow-y: auto;
+            padding: 10px;
+            font-size: 0.9em;
+            border-top: 2px solid #555;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <span>AssemblySim v1.0</span>
+        <div>
+            Scenario:
+            <select id="scenario-select" onchange="loadScenario()">
+                <option value="A">Variant A: Function Calls</option>
+                <option value="B">Variant B: Buffer Overflow</option>
+                <option value="C">Variant C: Shellcode Injection</option>
+            </select>
+        </div>
+    </header>
+
+    <div id="controls">
+        <button onclick="step()" id="btn-step">Step Into (F11)</button>
+        <button onclick="reset()" id="btn-reset">Reset</button>
+        <span style="flex:1;"></span>
+        <span id="status-msg">Ready</span>
+    </div>
+
+    <div id="main-container">
+        <div id="code-panel" class="panel">
+            <h3>Code Segment</h3>
+            <div id="instruction-list"></div>
+        </div>
+        <div id="cpu-panel" class="panel">
+            <h3>CPU Registers</h3>
+            <div id="registers"></div>
+        </div>
+        <div id="memory-panel" class="panel">
+            <h3>Stack Memory</h3>
+            <div id="memory-view"></div>
+        </div>
+    </div>
+
+    <div id="log"></div>
+
+    <script>
+        // --- State ---
+        const MEM_SIZE = 64; // Visualized stack slots
+        const STACK_BASE = 0x1000;
+
+        let registers = {
+            EAX: 0, EBX: 0, ECX: 0, EDX: 0,
+            EIP: 0, ESP: STACK_BASE, EBP: STACK_BASE
+        };
+
+        let memory = {}; // Map addr -> value (hex string)
+        let instructions = [];
+        let labels = {}; // Map label -> line index
+
+        // --- Scenarios ---
+        const scenarios = {
+            "A": [
+                "MOV EAX, 10",
+                "PUSH EAX",
+                "CALL func_add",
+                "ADD ESP, 4",
+                "HLT",
+                "",
+                "func_add:",
+                "PUSH EBP",
+                "MOV EBP, ESP",
+                "MOV EAX, [EBP+8]",
+                "ADD EAX, 5",
+                "POP EBP",
+                "RET"
+            ],
+            "B": [
+                "// Goal: Overwrite Return Address to jump to 0xCAFEBABE",
+                "// Buffer is at EBP-8",
+                "MOV EAX, 0x41414141",
+                "MOV [EBP-8], EAX  // Buffer[0]",
+                "MOV [EBP-4], EAX  // Buffer[1] (Overwrites saved EBP)",
+                "MOV [EBP], 0xCAFEBABE // Overwrites Ret Addr!",
+                "RET // Boom",
+                "HLT"
+            ],
+            "C": [
+                "// Manual Shellcode Injection",
+                "MOV EAX, 0x90909090 // NOP Sled",
+                "PUSH EAX",
+                "MOV EAX, 0xCC00CC00 // Shellcode",
+                "PUSH EAX",
+                "MOV EAX, ESP",
+                "JMP EAX // Jump to Stack"
+            ]
+        };
+
+        // --- Init ---
+        function init() {
+            loadScenario();
+            render();
+        }
+
+        function loadScenario() {
+            const key = document.getElementById('scenario-select').value;
+            const rawLines = scenarios[key];
+            parseInstructions(rawLines);
+            reset();
+        }
+
+        function parseInstructions(lines) {
+            instructions = [];
+            labels = {};
+            let index = 0;
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line || line.startsWith("//")) return;
+
+                if (line.endsWith(":")) {
+                    labels[line.slice(0, -1)] = index;
+                } else {
+                    // Split command and comments
+                    let clean = line.split("//")[0].trim();
+                    instructions.push({ text: clean, original: line });
+                    index++;
+                }
+            });
+        }
+
+        function reset() {
+            registers = {
+                EAX: 0, EBX: 0, ECX: 0, EDX: 0,
+                EIP: 0, ESP: STACK_BASE, EBP: STACK_BASE
+            };
+            memory = {};
+            // Clear Memory
+            for (let i = 0; i < MEM_SIZE; i++) {
+                memory[STACK_BASE - (i * 4)] = 0;
+            }
+            log("System Reset.");
+            render();
+        }
+
+        // --- Execution Core ---
+        function step() {
+            if (registers.EIP >= instructions.length) {
+                log("End of code.");
+                return;
+            }
+
+            const instrObj = instructions[registers.EIP];
+            const parts = instrObj.text.split(" ");
+            const op = parts[0].toUpperCase();
+            const argsText = instrObj.text.substring(op.length).trim();
+            const args = argsText ? argsText.split(",").map(x => x.trim()) : [];
+
+            registers.EIP++; // Advance IP by default (jumps will overwrite)
+
+            try {
+                execute(op, args);
+            } catch (e) {
+                log("ERROR: " + e.message);
+            }
+
+            render();
+        }
+
+        function execute(op, args) {
+            log(`Executing: ${op} ${args.join(", ")}`);
+
+            // Helper to resolve Value or Register
+            const getVal = (arg) => {
+                if (arg.startsWith("0x")) return parseInt(arg, 16);
+                if (!isNaN(arg)) return parseInt(arg);
+                if (registers[arg] !== undefined) return registers[arg];
+                if (arg.startsWith("[") && arg.endsWith("]")) {
+                    // Memory dereference: [EBP-4] or [ESP]
+                    let inner = arg.slice(1, -1);
+                    // Handle simple math inside brackets e.g. EBP-4
+                    let addr = evalMath(inner);
+                    return getMem(addr);
+                }
+                throw new Error("Unknown operand: " + arg);
+            };
+
+            const setVal = (arg, val) => {
+                if (registers[arg] !== undefined) {
+                    registers[arg] = val;
+                } else if (arg.startsWith("[") && arg.endsWith("]")) {
+                    let inner = arg.slice(1, -1);
+                    let addr = evalMath(inner);
+                    setMem(addr, val);
+                } else {
+                    throw new Error("Cannot assign to: " + arg);
+                }
+            };
+
+            switch (op) {
+                case "MOV": setVal(args[0], getVal(args[1])); break;
+                case "ADD": setVal(args[0], getVal(args[0]) + getVal(args[1])); break;
+                case "SUB": setVal(args[0], getVal(args[0]) - getVal(args[1])); break;
+                case "PUSH":
+                    registers.ESP -= 4;
+                    setMem(registers.ESP, getVal(args[0]));
+                    break;
+                case "POP":
+                    setVal(args[0], getMem(registers.ESP));
+                    registers.ESP += 4;
+                    break;
+                case "CALL":
+                    let target = labels[args[0]];
+                    if (target === undefined) target = getVal(args[0]); // Supports CALL EAX
+                    registers.ESP -= 4;
+                    setMem(registers.ESP, registers.EIP); // Push Return Address
+                    registers.EIP = target; // Jump
+                    break;
+                case "RET":
+                    let retAddr = getMem(registers.ESP);
+                    registers.ESP += 4;
+                    registers.EIP = retAddr;
+                    if (retAddr === 0xCAFEBABE) alert("SUCCESS! Jumped to 0xCAFEBABE!");
+                    break;
+                case "JMP":
+                    let jumpTgt = labels[args[0]];
+                    if (jumpTgt === undefined) jumpTgt = getVal(args[0]);
+                    registers.EIP = jumpTgt;
+                    break;
+                case "HLT":
+                    alert("Execution Halted.");
+                    registers.EIP--; // Stay here
+                    break;
+                default:
+                    log("Unknown instruction: " + op);
+            }
+        }
+
+        function evalMath(expr) {
+            // Very basic parsing for EBP-4, ESP+8, etc.
+            let parts = expr.split(/([+\-])/);
+            let val = registers[parts[0]] || parseInt(parts[0], 16) || 0;
+
+            for (let i = 1; i < parts.length; i += 2) {
+                let op = parts[i];
+                let num = parseInt(parts[i + 1]) || 0;
+                if (op === '+') val += num;
+                if (op === '-') val -= num;
+            }
+            return val;
+        }
+
+        function setMem(addr, val) {
+            memory[addr] = val;
+        }
+
+        function getMem(addr) {
+            return memory[addr] || 0;
+        }
+
+        // --- UI Rendering ---
+        function render() {
+            // Render Instructions
+            const codeList = document.getElementById('instruction-list');
+            codeList.innerHTML = instructions.map((ins, i) => {
+                const active = i === registers.EIP ? 'active' : '';
+                return `<div class="instruction ${active}" onclick="log('Line ${i}')">${i}: ${ins.original}</div>`;
+            }).join('');
+
+            // Render Registers
+            const regDiv = document.getElementById('registers');
+            regDiv.innerHTML = Object.keys(registers).map(r => `
+            <div class="register-row">
+                <span class="reg-name">${r}</span>
+                <span class="reg-val">0x${registers[r].toString(16).toUpperCase().padStart(8, '0')}</span>
+            </div>
+        `).join('');
+
+            // Render Memory Stack
+            const memDiv = document.getElementById('memory-view');
+            let html = '';
+            // Render from Base down to ESP-16 (context)
+            const topAddr = STACK_BASE;
+            const bottomAddr = registers.ESP - 32;
+
+            for (let addr = topAddr; addr >= bottomAddr; addr -= 4) {
+                let val = memory[addr] || 0;
+                let hexVal = val.toString(16).toUpperCase().padStart(8, '0');
+
+                let label = '';
+                if (addr === registers.ESP) label += ' <- ESP';
+                if (addr === registers.EBP) label += ' <- EBP';
+
+                html += `
+                <div class="mem-row ${label ? 'stack-ptr' : ''}">
+                    <div class="mem-addr">0x${addr.toString(16).toUpperCase()}</div>
+                    <div class="mem-val">0x${hexVal}</div>
+                    <div class="mem-label">${label}</div>
+                </div>
+            `;
+            }
+            memDiv.innerHTML = html;
+        }
+
+        function log(msg) {
+            const d = document.getElementById('log');
+            d.innerHTML += `<div>> ${msg}</div>`;
+            d.scrollTop = d.scrollHeight;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 08 Tool: Web Lab</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #e0f2f1;
+            color: #004d40;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #009688;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            opacity: 1;
+            border-bottom: 3px solid #00695c;
+            background: #e0f2f1;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        .browser {
+            border: 1px solid #ccc;
+            background: #fff;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .url-bar {
+            background: #eee;
+            padding: 5px 10px;
+            border-bottom: 1px solid #ccc;
+            font-family: monospace;
+        }
+
+        .viewport {
+            padding: 20px;
+        }
+
+        button {
+            padding: 5px 15px;
+            background: #009688;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        input {
+            padding: 5px;
+            border: 1px solid #ccc;
+        }
+
+        .cookie-jar {
+            background: #ffecb3;
+            padding: 10px;
+            font-family: monospace;
+            border: 1px dashed #ff6f00;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Web Lab Suites</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="setTab('cookies')">Variant A: Cookie Shop</div>
+            <div class="tab" onclick="setTab('csrf')">Variant B: CSRF</div>
+            <div class="tab" onclick="setTab('hijack')">Variant C: Session Hijack</div>
+        </div>
+
+        <!-- COOKIES -->
+        <div id="cookies" class="content active">
+            <h3>The Cookie Jar</h3>
+            <div class="browser">
+                <div class="url-bar">http://bakery.com/shop</div>
+                <div class="viewport">
+                    <h4>Welcome <span id="ckUser">Guest</span></h4>
+                    <p>Balance: $<span id="ckBal">0</span></p>
+                    <hr>
+                    <div style="display:flex; gap:10px;">
+                        <div style="border:1px solid #ddd; padding:10px;">
+                            <h5>Plain Bread</h5>
+                            <p>$2</p>
+                            <button onclick="buy(2)">Buy</button>
+                        </div>
+                        <div style="border:1px solid gold; padding:10px; background:#fffde7;">
+                            <h5>Gold Cake</h5>
+                            <p>$100</p>
+                            <button onclick="buy(100)">Buy</button>
+                        </div>
+                    </div>
+                    <div id="ckMsg" style="margin-top:10px; font-weight:bold;"></div>
+                </div>
+            </div>
+
+            <div class="cookie-jar">
+                <label>Browser Cookies (Editable):</label><br>
+                <input type="text" id="ckStr" style="width:100%" value="user=Guest; balance=5">
+                <button onclick="ckUpdate()" style="margin-top:5px; background:#ff6f00;">Inject / Refresh</button>
+            </div>
+        </div>
+
+        <!-- CSRF -->
+        <div id="csrf" class="content">
+            <h3>CSRF Simulator</h3>
+            <div style="display:flex; gap:20px;">
+                <div class="browser" style="flex:1;">
+                    <div class="url-bar">http://bank.com/dashboard (Alice)</div>
+                    <div class="viewport" style="background:#e3f2fd;">
+                        <h4>Bank of Alice</h4>
+                        <p>Balance: $<span id="csrfBal">1000</span></p>
+                        <ul id="csrfLog"
+                            style="font-size:0.8em; height:100px; overflow-y:auto; background:white; padding:5px;">
+                            <li>Log: Logged in.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="browser" style="flex:1; border-color:red;">
+                    <div class="url-bar">http://evil.com/free-ipad</div>
+                    <div class="viewport" style="background:#ffebee; text-align:center;">
+                        <h3>WIN A FREE iPAD!</h3>
+                        <p>Click below to claim immediately!</p>
+                        <!-- Malicious Link -->
+                        <button onclick="csrfAttack()" style="font-size:1.5em; background:red; padding:20px;">CLAIM
+                            iPAD</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- HIJACK -->
+        <div id="hijack" class="content">
+            <h3>Session Hijacker</h3>
+
+            <div style="background:#cfd8dc; padding:10px; margin-bottom:10px;">
+                <h4>1. Victim (Admin)</h4>
+                <button onclick="hijackLogin()">Admin Login</button>
+                <span id="hjVicStatus">Not Logged In</span>
+            </div>
+
+            <div style="background:#000; color:#0f0; padding:10px; font-family:monospace; margin-bottom:10px;">
+                <h4>2. Network Sniffer (Wifi)</h4>
+                <button onclick="hijackSniff()" style="background:#333; color:#fff; border:1px solid #0f0;">Sniff
+                    Packets</button>
+                <div id="hjSniffOut">Traffic: Silence...</div>
+            </div>
+
+            <div class="browser" style="border-color:red;">
+                <div class="url-bar">http://admin-portal.com (Attacker Browser)</div>
+                <div class="viewport">
+                    <h2 id="hjAttackerHeader">Login Page</h2>
+                    <p id="hjAttackerBody">Please enter password...</p>
+                    <hr>
+                    <label>Cookie Injector:</label>
+                    <input type="text" id="hjInject" placeholder="Paste session_token=...">
+                    <button onclick="hijackInject()">Refresh Page</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setTab(id) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        /* --- COOKIES --- */
+        function parseCookies(str) {
+            const res = {};
+            str.split(';').forEach(p => {
+                const [k, v] = p.split('=');
+                if (k && v) res[k.trim()] = v.trim();
+            });
+            return res;
+        }
+
+        function ckUpdate() {
+            const raw = document.getElementById('ckStr').value;
+            const c = parseCookies(raw);
+
+            document.getElementById('ckUser').innerText = c['user'] || "Guest";
+            document.getElementById('ckBal').innerText = c['balance'] || "0";
+            document.getElementById('ckMsg').innerText = "Cookies Updated.";
+        }
+
+        function buy(price) {
+            const raw = document.getElementById('ckStr').value;
+            const c = parseCookies(raw);
+            let bal = parseInt(c['balance'] || "0");
+
+            if (bal >= price) {
+                bal -= price;
+                document.getElementById('ckMsg').innerText = "Purchase Successful!";
+                document.getElementById('ckMsg').style.color = "green";
+                // Update cookie string to reflect new balance (server would do this)
+                // But this is a client-side hack lab, so we just show success
+            } else {
+                document.getElementById('ckMsg').innerText = "Insufficient Funds!";
+                document.getElementById('ckMsg').style.color = "red";
+            }
+        }
+
+        /* --- CSRF --- */
+        function csrfAttack() {
+            // Simulate the GET/POST request
+            const balEl = document.getElementById('csrfBal');
+            let bal = parseInt(balEl.innerText);
+
+            if (bal > 0) {
+                bal -= 500;
+                balEl.innerText = bal;
+                const li = document.createElement('li');
+                li.innerHTML = `Transfer: <strong>$500</strong> to <em>Mallory</em> (Ref: Free-iPad)`;
+                li.style.color = "red";
+                document.getElementById('csrfLog').appendChild(li);
+                alert("You clicked the link! Check Alice's Bank Account...");
+            }
+        }
+
+        /* --- HIJACK --- */
+        let activeSession = null;
+
+        function hijackLogin() {
+            activeSession = "Adm_" + Math.floor(Math.random() * 10000);
+            document.getElementById('hjVicStatus').innerText = "Logged In (Active)";
+            document.getElementById('hjVicStatus').style.color = "green";
+        }
+
+        function hijackSniff() {
+            if (!activeSession) {
+                document.getElementById('hjSniffOut').innerText = "Traffic: No active sessions found.";
+                return;
+            }
+            document.getElementById('hjSniffOut').innerHTML = `Traffic Captured!<br>Cookie: <span style="background:#333; color:#fff;">session_token=${activeSession}</span>`;
+        }
+
+        function hijackInject() {
+            const inj = document.getElementById('hjInject').value;
+            if (inj.includes(activeSession) && activeSession !== null) {
+                document.getElementById('hjAttackerHeader').innerText = "Welcome, Admin";
+                document.getElementById('hjAttackerHeader').style.color = "green";
+                document.getElementById('hjAttackerBody').innerText = "You have full access to the system.";
+            } else {
+                document.getElementById('hjAttackerHeader').innerText = "Login Page";
+                document.getElementById('hjAttackerHeader').style.color = "black";
+                document.getElementById('hjAttackerBody').innerText = "Invalid Session. Please login.";
+            }
+        }
+    </script>
+</body>
+
+</html>

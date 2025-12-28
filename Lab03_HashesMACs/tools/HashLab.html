@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 03 Tool: Hash Lab</title>
+    <!-- Use a simple pure JS SHA256/MD5 implementation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #e0f7fa;
+            color: #006064;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #00acc1;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            opacity: 1;
+            border-bottom: 3px solid #0097a7;
+            background: #e0f7fa;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        input,
+        textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #b2ebf2;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #00bcd4;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0097a7;
+        }
+
+        .hash-disp {
+            font-family: monospace;
+            word-break: break-all;
+            background: #f5f5f5;
+            padding: 10px;
+            margin-top: 5px;
+            border-left: 5px solid #ccc;
+        }
+
+        .match {
+            border-left-color: #4caf50;
+            background: #e8f5e9;
+        }
+
+        .mismatch {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+
+        .mining-stat {
+            font-size: 2em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Hash Lab Suites</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="setTab('csum')">Variant A: Checksum</div>
+            <div class="tab" onclick="setTab('col')">Variant B: Collision</div>
+            <div class="tab" onclick="setTab('mine')">Variant C: Mining</div>
+        </div>
+
+        <!-- CHECKSUM -->
+        <div id="csum" class="content active">
+            <h3>Integrity Check</h3>
+            <textarea id="csInput" placeholder="Enter File Content..."></textarea>
+            <button onclick="calcHash()">Calculate SHA-256</button>
+            <div id="csOutput" class="hash-disp">Hash will appear here...</div>
+        </div>
+
+        <!-- COLLISION -->
+        <div id="col" class="content">
+            <h3>Birthday Attack Simulator</h3>
+            <p>Using weak 16-bit hash (First 4 hex chars of MD5).</p>
+            <button onclick="startCollision()">Start Birthday Attack</button>
+            <div id="colStats" style="margin-top:10px;">Attempts: 0</div>
+            <div id="colLog"
+                style="height:200px; overflow-y:auto; background:#f5f5f5; font-family:monospace; padding:10px; margin-top:10px;">
+            </div>
+        </div>
+
+        <!-- MINING -->
+        <div id="mine" class="content">
+            <h3>PoW Miner</h3>
+            <label>Block Data:</label>
+            <input type="text" id="mineData" value="Transaction: Alice sends 10 BTC">
+            <label>Difficulty (Leading Zeros):</label>
+            <input type="number" id="mineDiff" value="3" min="1" max="5">
+            <button onclick="startMining()">Start Mining</button>
+
+            <div class="mining-stat">Nonce: <span id="mineNonce">0</span></div>
+            <div id="mineHash" class="hash-disp">Current Hash: ...</div>
+            <div id="mineStatus" style="text-align:center; font-weight:bold;">Unit: IDLE</div>
+        </div>
+    </div>
+
+    <script>
+        function setTab(id) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        /* --- CHECKSUM --- */
+        function calcHash() {
+            const txt = document.getElementById('csInput').value;
+            const hash = CryptoJS.SHA256(txt).toString();
+            const div = document.getElementById('csOutput');
+            div.innerText = hash;
+
+            // Simple visual effect
+            div.className = "hash-disp";
+            setTimeout(() => div.className = "hash-disp match", 100);
+        }
+
+        /* --- COLLISION --- */
+        let colRunning = false;
+        function startCollision() {
+            if (colRunning) return;
+            colRunning = true;
+            document.getElementById('colLog').innerHTML = "";
+            const seen = {}; // Map { hash: input }
+            let attempts = 0;
+
+            const interval = setInterval(() => {
+                // Batch process for speed
+                for (let i = 0; i < 50; i++) {
+                    attempts++;
+                    const input = "Ticket_" + Math.floor(Math.random() * 1000000);
+                    // Weak hash: first 4 chars of MD5 (16 bits)
+                    const fullHash = CryptoJS.MD5(input).toString();
+                    const weakHash = fullHash.substring(0, 4);
+
+                    if (seen[weakHash]) {
+                        // COLLISION FOUND
+                        clearInterval(interval);
+                        colRunning = false;
+                        const msg = `COLLISION FOUND!\nInput A: ${seen[weakHash]}\nInput B: ${input}\nHash: ${weakHash}`;
+                        document.getElementById('colLog').innerText = msg + "\n\n" + document.getElementById('colLog').innerText;
+                        document.getElementById('colStats').innerText = `Attempts: ${attempts} (Found Match!)`;
+                        return;
+                    }
+
+                    seen[weakHash] = input;
+                }
+                document.getElementById('colStats').innerText = `Attempts: ${attempts}`;
+            }, 10);
+        }
+
+        /* --- MINING --- */
+        function startMining() {
+            const data = document.getElementById('mineData').value;
+            const diff = parseInt(document.getElementById('mineDiff').value);
+            const target = "0".repeat(diff);
+            let nonce = 0;
+
+            document.getElementById('mineStatus').innerText = "MINING...";
+            document.getElementById('mineStatus').style.color = "orange";
+
+            const interval = setInterval(() => {
+                // Batch
+                for (let i = 0; i < 100; i++) {
+                    nonce++;
+                    const hash = CryptoJS.SHA256(data + nonce).toString();
+
+                    if (hash.startsWith(target)) {
+                        clearInterval(interval);
+                        document.getElementById('mineNonce').innerText = nonce;
+                        document.getElementById('mineHash').innerText = hash;
+                        document.getElementById('mineHash').className = "hash-disp match";
+                        document.getElementById('mineStatus').innerText = "BLOCK SOLVED!";
+                        document.getElementById('mineStatus').style.color = "green";
+                        return;
+                    }
+
+                    // Update display occasionally
+                    if (nonce % 50 === 0) {
+                        document.getElementById('mineNonce').innerText = nonce;
+                        document.getElementById('mineHash').innerText = hash;
+                    }
+                }
+            }, 10);
+        }
+    </script>
+</body>
+
+</html>

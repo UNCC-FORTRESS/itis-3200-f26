@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 08 Tool: Cookie Shop</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #fdfbf7;
+        }
+
+        .header {
+            background: #3e2723;
+            color: white;
+            padding: 15px;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .balance {
+            font-size: 1.5em;
+            color: #ffeb3b;
+            font-weight: bold;
+        }
+
+        .items {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .item {
+            background: white;
+            border: 1px solid #d7ccc8;
+            padding: 15px;
+            width: 200px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        button {
+            background: #795548;
+            color: white;
+            padding: 10px;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+            margin-top: 10px;
+        }
+
+        button:hover {
+            background: #5d4037;
+        }
+
+        .msg {
+            margin-top: 20px;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 4px;
+            text-align: center;
+        }
+
+        .success {
+            background: #dcedc8;
+            color: #33691e;
+        }
+
+        .error {
+            background: #ffcdd2;
+            color: #b71c1c;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="loginOverlay"
+        style="position:fixed; top:0; left:0; right:0; bottom:0; background:#3e2723; color:white; display:flex; flex-direction:column; align-items:center; justify-content:center; z-index:100;">
+        <h1>Welcome to Cookie Shop</h1>
+        <input type="text" id="username" placeholder="Username" style="padding:10px; font-size:1.2em;">
+        <button onclick="login()" style="width:200px; margin-top:20px; background:#ffeb3b; color:black;">Enter
+            Shop</button>
+    </div>
+
+    <div class="header">
+        <div>Cookie Shop</div>
+        <div>Balance: <span class="balance" id="balanceDisplay">$10.00</span></div>
+    </div>
+
+    <div class="items">
+        <div class="item">
+            <h3>Standard Cookie</h3>
+            <p>Just a basic cookie.</p>
+            <div style="font-size:1.2em; font-weight:bold; margin:10px;">$2.00</div>
+            <button onclick="buy(2)">Buy</button>
+        </div>
+        <div class="item">
+            <h3>The Flagship</h3>
+            <p>The ultimate trophy. Required for Lab.</p>
+            <div style="font-size:1.2em; font-weight:bold; margin:10px;">$1,000.00</div>
+            <button onclick="buy(1000)">Buy Target</button>
+        </div>
+    </div>
+
+    <div id="msg" class="msg" style="display:none"></div>
+
+    <script>
+        function setCookie(name, value) {
+            document.cookie = name + "=" + (value || "") + "; path=/";
+        }
+        function getCookie(name) {
+            var nameEQ = name + "=";
+            var ca = document.cookie.split(';');
+            for (var i = 0; i < ca.length; i++) {
+                var c = ca[i];
+                while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        function login() {
+            const u = document.getElementById('username').value;
+            if (!u) return;
+            document.getElementById('loginOverlay').style.display = 'none';
+
+            // Check if cookie exists
+            const bal = getCookie("shop_balance");
+            if (!bal) {
+                setCookie("shop_balance", "10"); // Vulnerable!
+            }
+            updateUI();
+        }
+
+        function updateUI() {
+            let bal = getCookie("shop_balance");
+            if (!bal) bal = "10";
+            document.getElementById('balanceDisplay').innerText = "$" + parseFloat(bal).toLocaleString();
+        }
+
+        function buy(amount) {
+            let bal = parseFloat(getCookie("shop_balance"));
+            const msg = document.getElementById('msg');
+
+            if (bal >= amount) {
+                bal -= amount;
+                setCookie("shop_balance", bal);
+                updateUI();
+                msg.innerText = "Purchase Successful! You're a winner!";
+                msg.className = "msg success";
+            } else {
+                msg.innerText = "Insufficient Funds! Check your cookies?";
+                msg.className = "msg error";
+            }
+            msg.style.display = 'block';
+        }
+
+        // Periodic Refresh in case they edit via F12
+        setInterval(updateUI, 1000);
+    </script>
+</body>
+
+</html>

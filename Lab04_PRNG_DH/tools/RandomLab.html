@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 04 Tool: Random Lab</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #f3e5f5;
+            color: #4a148c;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ab47bc;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .tab.active {
+            opacity: 1;
+            border-bottom: 3px solid #7b1fa2;
+            background: #f3e5f5;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid #ce93d8;
+            width: 100px;
+            margin-right: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #8e24aa;
+            color: white;
+            border: none;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #7b1fa2;
+        }
+
+        .result-box {
+            background: #fce4ec;
+            padding: 15px;
+            border-left: 5px solid #d81b60;
+            margin-top: 20px;
+            font-family: monospace;
+        }
+
+        .step {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Random Lab Suites</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="setTab('dh')">Variant A: Diffie-Hellman</div>
+            <div class="tab" onclick="setTab('lcg')">Variant B: LCG Predictor</div>
+            <div class="tab" onclick="setTab('seed')">Variant C: Seed Attack</div>
+        </div>
+
+        <!-- DIFFIE HELLMAN -->
+        <div id="dh" class="content active">
+            <h3>Key Exchange Visualizer</h3>
+            <p>Formula: $g^x \mod p$</p>
+            <label>Prime (p):</label> <input type="number" id="dhP" value="23">
+            <label>Base (g):</label> <input type="number" id="dhG" value="5">
+            <br><br>
+            <div style="display:flex; gap:20px;">
+                <div style="background:#e1bee7; padding:10px; flex:1;">
+                    <h4>Alice (You)</h4>
+                    <label>Secret (a):</label> <input type="number" id="dhA_priv" value="6">
+                    <button onclick="calcDH()">Calculate</button>
+                    <div id="resA" class="result-box">Public A: ?<br>Shared Key: ?</div>
+                </div>
+                <div style="background:#bbdefb; padding:10px; flex:1;">
+                    <h4>Bob (Simulated)</h4>
+                    <label>Secret (b):</label> <input type="number" id="dhB_priv" value="15" readonly>
+                    <div id="resB" class="result-box" style="background:#e3f2fd; border-color:#2196f3;">Public B:
+                        ?<br>Shared Key: ?</div>
+                </div>
+            </div>
+
+            <div style="margin-top:20px; padding:10px; border:1px dashed red;">
+                <h4>Eve (The Attacker)</h4>
+                <p>Eve sees: p=<span id="eveP"></span>, g=<span id="eveG"></span>, A=<span id="evePubA"></span>, B=<span
+                        id="evePubB"></span>.</p>
+                <button onclick="bruteDH()" style="background:#d32f2f;">Brute Force Secret 'a'</button>
+                <div id="eveRes"></div>
+            </div>
+        </div>
+
+        <!-- LCG -->
+        <div id="lcg" class="content">
+            <h3>LCG Predictor</h3>
+            <p>Formula: $X_{next} = (A \cdot X + C) \mod M$</p>
+            <label>Mod (M):</label> <input type="number" id="lcgM" value="100">
+            <label>Mult (A):</label> <input type="number" id="lcgA" value="7">
+            <label>Inc (C):</label> <input type="number" id="lcgC" value="7">
+            <label>Seed:</label> <input type="number" id="lcgSeed" value="0">
+            <br><br>
+            <button onclick="genLCG()">Generate Sequence</button>
+            <div id="lcgOut" class="result-box" style="word-wrap:break-word;"></div>
+        </div>
+
+        <!-- SEED ATTACK -->
+        <div id="seed" class="content">
+            <h3>Time-Seed Attack</h3>
+            <p>Server Code: `token = (seed * 9301 + 49297) % 233280` (A classic PRNG)</p>
+            <label>Target Seed (Day):</label> <input type="number" id="seedTarget" value="24">
+            <button onclick="genAdmin()">Generate Admin Token</button>
+            <div id="seedAdmin" style="font-size:1.5em; font-weight:bold; margin-top:10px;">Token: ?</div>
+
+            <hr>
+            <h4>Attacker View</h4>
+            <p>I know the token is <span id="atkTarget">?</span>. I know seed is between 0-100.</p>
+            <button onclick="crackSeed()" style="background:#d32f2f;">Brute Force Seeds</button>
+            <div id="crackRes" class="result-box"></div>
+        </div>
+    </div>
+
+    <script>
+        function setTab(id) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        /* --- DH --- */
+        let publicA = 0;
+        let publicB = 0;
+
+        function modExp(base, exp, mod) {
+            let res = 1;
+            base = base % mod;
+            while (exp > 0) {
+                if (exp % 2 === 1) res = (res * base) % mod;
+                exp = Math.floor(exp / 2);
+                base = (base * base) % mod;
+            }
+            return res;
+        }
+
+        function calcDH() {
+            const p = parseInt(document.getElementById('dhP').value);
+            const g = parseInt(document.getElementById('dhG').value);
+            const a = parseInt(document.getElementById('dhA_priv').value);
+            const b = parseInt(document.getElementById('dhB_priv').value);
+
+            publicA = modExp(g, a, p);
+            publicB = modExp(g, b, p);
+
+            const sharedA = modExp(publicB, a, p);
+            const sharedB = modExp(publicA, b, p);
+
+            document.getElementById('resA').innerHTML = `Public A: ${publicA}<br><strong>Shared Key: ${sharedA}</strong>`;
+            document.getElementById('resB').innerHTML = `Public B: ${publicB}<br><strong>Shared Key: ${sharedB}</strong>`;
+
+            // Eve Update
+            document.getElementById('eveP').innerText = p;
+            document.getElementById('eveG').innerText = g;
+            document.getElementById('evePubA').innerText = publicA;
+            document.getElementById('evePubB').innerText = publicB;
+        }
+
+        function bruteDH() {
+            const p = parseInt(document.getElementById('dhP').value);
+            const g = parseInt(document.getElementById('dhG').value);
+            const targetA = publicA;
+
+            let found = -1;
+            for (let i = 1; i < p; i++) {
+                if (modExp(g, i, p) === targetA) {
+                    found = i;
+                    break;
+                }
+            }
+
+            const div = document.getElementById('eveRes');
+            if (found !== -1) {
+                div.innerHTML = `<span style="color:red">CRACKED! Discovered Secret a = ${found}</span>`;
+            } else {
+                div.innerText = "Not found (Check range)";
+            }
+        }
+
+        /* --- LCG --- */
+        function genLCG() {
+            const m = parseInt(document.getElementById('lcgM').value);
+            const a = parseInt(document.getElementById('lcgA').value);
+            const c = parseInt(document.getElementById('lcgC').value);
+            let x = parseInt(document.getElementById('lcgSeed').value);
+
+            let seq = [];
+            for (let i = 0; i < 20; i++) {
+                seq.push(x);
+                x = (a * x + c) % m;
+            }
+
+            document.getElementById('lcgOut').innerText = seq.join(" -> ");
+        }
+
+        /* --- SEED --- */
+        // Simple PRNG function often used in textbook examples
+        function pseudo(seed) {
+            return (seed * 9301 + 49297) % 233280;
+        }
+
+        let targetToken = 0;
+
+        function genAdmin() {
+            const seed = parseInt(document.getElementById('seedTarget').value);
+            targetToken = pseudo(seed);
+            document.getElementById('seedAdmin').innerText = "Token: " + targetToken;
+            document.getElementById('atkTarget').innerText = targetToken;
+        }
+
+        function crackSeed() {
+            if (targetToken === 0) return alert("Generate Token First");
+
+            let found = -1;
+            // Scan 0-100
+            for (let i = 0; i <= 100; i++) {
+                if (pseudo(i) === targetToken) {
+                    found = i;
+                    break;
+                }
+            }
+
+            const div = document.getElementById('crackRes');
+            if (found !== -1) {
+                div.innerHTML = `<span style="color:green; font-weight:bold;">SEED FOUND: ${found}</span>`;
+            } else {
+                div.innerText = "Seed not in range 0-100.";
+            }
+        }
+    </script>
+</body>
+
+</html>

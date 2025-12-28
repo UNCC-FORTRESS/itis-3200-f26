@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 06 Tool: Cert Lab</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #fafafa;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ddd;
+        }
+
+        h2 {
+            border-bottom: 2px solid #2196f3;
+            padding-bottom: 5px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+
+        input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            width: 250px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #2196f3;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .cert-card {
+            border: 2px solid #333;
+            padding: 10px;
+            background: #fffde7;
+            font-family: monospace;
+            margin-top: 10px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .trusted-sig {
+            border: 2px solid green;
+            padding: 5px;
+            background: #e8f5e9;
+            color: green;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .untrusted-sig {
+            border: 2px solid red;
+            padding: 5px;
+            background: #ffebee;
+            color: red;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .browser-bar {
+            background: #eee;
+            padding: 10px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border: 1px solid #ccc;
+        }
+
+        .lock-icon {
+            font-size: 1.5em;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>PKI & Certificate Simulator</h1>
+
+        <div class="section">
+            <h3>1. The Certificate Authority (CA)</h3>
+            <p>We are "VeriSign Root CA". We are trusted by the browser.</p>
+            <label>Request Domain:</label> <input type="text" id="csrDomain" placeholder="www.example.com">
+            <label>Organization:</label> <input type="text" id="csrOrg" placeholder="Example Inc">
+            <button onclick="issueCert()">Issue Certificate</button>
+
+            <div id="issuedCertDisplay" style="display:none;">
+                <div class="cert-card" id="certDetails"></div>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>2. Browser Verification</h3>
+            <div class="browser-bar">
+                <span id="lock" class="lock-icon">🔒</span>
+                <input type="text" id="browserUrl" placeholder="https://..."
+                    style="flex:1; border:none; background:transparent; font-size:1.2em;" readonly>
+            </div>
+            <div id="browserStatus">System Ready. Load a certificate to verify.</div>
+            <button onclick="loadCert('valid')" style="background:green;">Load Valid Cert</button>
+            <button onclick="loadCert('mismatch')" style="background:orange;">Load Mismatched Cert</button>
+            <button onclick="loadCert('self')" style="background:red;">Load Self-Signed Cert</button>
+        </div>
+    </div>
+
+    <script>
+        let currentCert = null;
+
+        function issueCert() {
+            const domain = document.getElementById('csrDomain').value;
+            const org = document.getElementById('csrOrg').value;
+
+            if (!domain || !org) return alert("Fill details");
+
+            currentCert = {
+                cn: domain,
+                org: org,
+                issuer: "VeriSign Root CA",
+                valid: true
+            };
+
+            const disp = document.getElementById('certDetails');
+            disp.innerHTML = `Subject: ${domain}<br>Org: ${org}<br>Issuer: VeriSign Root CA<br>Serial: ${Math.floor(Math.random() * 100000)}`;
+            document.getElementById('issuedCertDisplay').style.display = 'block';
+        }
+
+        function loadCert(type) {
+            const browserUrl = "https://" + (currentCert ? currentCert.cn : "www.unknown.com");
+            document.getElementById('browserUrl').value = browserUrl;
+
+            const lock = document.getElementById('lock');
+            const status = document.getElementById('browserStatus');
+
+            if (type === 'valid') {
+                if (!currentCert) return alert("Issue a cert first!");
+                // Check Trust
+                if (currentCert.issuer === "VeriSign Root CA") {
+                    lock.innerText = "🔒";
+                    lock.style.color = "green";
+                    status.innerHTML = `<span style="color:green; font-weight:bold;">SECURE CONNECTION</span><br>Verified by ${currentCert.issuer}.`;
+                }
+            } else if (type === 'mismatch') {
+                // Same CA, but wrong domain
+                document.getElementById('browserUrl').value = "https://www.evil-site.com";
+                lock.innerText = "⚠️";
+                lock.style.color = "orange";
+                status.innerHTML = `<span style="color:orange; font-weight:bold;">DOMAIN MISMATCH</span><br>Cert is for ${currentCert ? currentCert.cn : "???"}, but you are visiting www.evil-site.com.`;
+            } else if (type === 'self') {
+                // Self Signed
+                lock.innerText = "❌";
+                lock.style.color = "red";
+                const fakeDomain = document.getElementById('csrDomain').value || "site.com";
+                status.innerHTML = `<span style="color:red; font-weight:bold;">UNTRUSTED AUTHORITY</span><br>Cert issuer 'HackerCA' is not in Root Store.`;
+            }
+        }
+    </script>
+</body>
+
+</html>

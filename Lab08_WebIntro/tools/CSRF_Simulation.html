@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 08 Tool: CSRF Simulation</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+            background: #eee;
+        }
+
+        .split {
+            display: flex;
+            gap: 20px;
+            height: 500px;
+        }
+
+        .window {
+            flex: 1;
+            border: 1px solid #999;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .title {
+            padding: 10px;
+            font-weight: bold;
+            color: white;
+        }
+
+        /* Bank Styles */
+        .bank {
+            border-color: #0d47a1;
+        }
+
+        .bank .title {
+            background: #0d47a1;
+        }
+
+        .bank-content {
+            padding: 20px;
+            text-align: center;
+        }
+
+        .log-area {
+            background: #212121;
+            color: #00e676;
+            padding: 10px;
+            height: 150px;
+            overflow-y: auto;
+            font-family: monospace;
+            text-align: left;
+        }
+
+        /* Evil Styles */
+        .evil {
+            border-color: #b71c1c;
+        }
+
+        .evil .title {
+            background: #b71c1c;
+        }
+
+        .evil-content {
+            padding: 20px;
+            background: #ffebee;
+            height: 100%;
+            text-align: center;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="split">
+        <!-- BANK -->
+        <div class="window bank">
+            <div class="title">Secure Bank (Tab 1)</div>
+            <div class="bank-content">
+                <h3>My Account</h3>
+                <div id="loginPanel">
+                    <input type="text" id="victim" placeholder="User ID">
+                    <button onclick="bankLogin()">Login</button>
+                </div>
+                <div id="accountPanel" style="display:none">
+                    <p>Status: <span style="color:green; font-weight:bold;">AUTHENTICATED</span></p>
+                    <p>Balance: $500,000</p>
+                    <hr>
+                    <label><input type="checkbox" id="csrfProtect"> Enable CSRF Token Protection</label>
+                </div>
+            </div>
+            <div class="log-area" id="bankLog">Server Log Waiting...</div>
+        </div>
+
+        <!-- EVIL -->
+        <div class="window evil">
+            <div class="title">Free-Iphones.com (Tab 2)</div>
+            <div class="evil-content">
+                <h1>CONGRATULATIONS!</h1>
+                <p>You have been selected to win a FREE Phone.</p>
+                <!-- The Attack Button -->
+                <button onclick="launchAttack()"
+                    style="background:#ff5252; color:white; font-size:1.5em; font-weight:bold; border:none; border-radius:10px; padding:20px;">CLICK
+                    HERE TO WIN!</button>
+                <p style="font-size:0.8em; margin-top:20px;">(Trust us, it's totally safe)</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let loggedIn = false;
+
+        function log(msg) {
+            const l = document.getElementById('bankLog');
+            l.innerHTML += `<div>> ${msg}</div>`;
+            l.scrollTop = l.scrollHeight;
+        }
+
+        function bankLogin() {
+            if (!document.getElementById('victim').value) return;
+            loggedIn = true;
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('accountPanel').style.display = 'block';
+            log("User logged in. Session Active.");
+        }
+
+        // This function simulates the Browser sending a request to the bank
+        // triggered by the Evil Site
+        function launchAttack() {
+            if (!loggedIn) {
+                alert("You are not logged into the bank (Left Side). Attack failed.");
+                return;
+            }
+
+            // check protection
+            const protected = document.getElementById('csrfProtect').checked;
+
+            log("Incoming POST /transfer?to=hacker&amt=1000");
+
+            if (protected) {
+                // In a real attack, the evil site wouldn't include the valid token because it can't read it.
+                // We simulate the bank checking for a token in the request.
+                // Since "launchAttack" logic (evil site) doesn't know the token, it sends null/garbage.
+                log("Processing... Checking CSRF Token...");
+                log("ERROR: Token Missing or Invalid. Request BLOCKED.");
+            } else {
+                // No protection. Browser sends auth cookies automatically.
+                log("Processing... Auth Cookie Valid.");
+                log("TRANSFER SUCCESS: $1000 sent to Hacker.");
+                alert("You clicked the button... and just lost $1000!");
+            }
+        }
+    </script>
+</body>
+
+</html>

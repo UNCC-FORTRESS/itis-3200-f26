@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 11 Tool: IDS Sim</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #3e2723;
+            color: #ffe0b2;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #795548;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            background: #4e342e;
+            margin-right: 5px;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .tab.active {
+            background: #ffca28;
+            color: #3e2723;
+            font-weight: bold;
+        }
+
+        .content {
+            display: none;
+            background: #5d4037;
+            padding: 20px;
+            border-radius: 0 5px 5px 5px;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        textarea {
+            width: 100%;
+            height: 60px;
+            background: #3e2723;
+            color: #fff;
+            border: 1px solid #795548;
+            padding: 10px;
+            font-family: monospace;
+        }
+
+        button {
+            background: #ffca28;
+            color: #3e2723;
+            border: none;
+            padding: 10px 20px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        .log-entry {
+            font-family: monospace;
+            border-bottom: 1px solid #795548;
+            padding: 5px;
+        }
+
+        .alert {
+            background: #b71c1c;
+            color: white;
+        }
+
+        .ok {
+            color: #a5d6a7;
+        }
+
+        /* Graph simulation */
+        .graph-container {
+            height: 200px;
+            border-left: 2px solid #fff;
+            border-bottom: 2px solid #fff;
+            position: relative;
+            margin-top: 20px;
+            background: #3e2723;
+        }
+
+        .bar {
+            position: absolute;
+            bottom: 0;
+            background: #4caf50;
+            width: 10px;
+            transition: height 0.2s;
+        }
+
+        .bar.high {
+            background: #f44336;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('sig')">Signature Mode</div>
+        <div class="tab" onclick="switchTab('anom')">Anomaly Mode</div>
+    </div>
+
+    <!-- SIGNATURE MODE -->
+    <div id="sig" class="content active">
+        <h3>1. Rule Editor</h3>
+        <textarea id="ruleInput"
+            placeholder='alert tcp any any -> any 80 (msg:"Backdoor"; content:"evil_v1";)'></textarea>
+        <button onclick="applyRule()">Apply Rule</button>
+
+        <h3>2. Packet Stream</h3>
+        <button onclick="genTraffic()">Analyze Stream</button>
+        <div id="sigLog" style="margin-top:10px; max-height:300px; overflow-y:auto; background:#212121;"></div>
+    </div>
+
+    <!-- ANOMALY MODE -->
+    <div id="anom" class="content">
+        <h3>Traffic Analysis (Requests/Sec)</h3>
+        <p>Baseline established. Threshold: <span id="threshDisplay">--</span></p>
+        <button onclick="runAnomalySim()">Inject Anomaly</button>
+        <button onclick="resetGraph()">Reset</button>
+
+        <div class="graph-container" id="graph">
+            <!-- Bars go here -->
+        </div>
+        <div id="anomStatus" style="font-size:1.5em; font-weight:bold; margin-top:20px; text-align:center;">STATUS:
+            NORMAL</div>
+    </div>
+
+    <script>
+        function switchTab(t) {
+            document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+            document.querySelectorAll('.content').forEach(x => x.classList.remove('active'));
+            if (t === 'sig') {
+                document.querySelector('.tab:nth-child(1)').classList.add('active');
+                document.getElementById('sig').classList.add('active');
+            } else {
+                document.querySelector('.tab:nth-child(2)').classList.add('active');
+                document.getElementById('anom').classList.add('active');
+            }
+        }
+
+        /* --- Signature Logic --- */
+        let activeRule = null; // { msg: "", content: "" }
+
+        function applyRule() {
+            const raw = document.getElementById('ruleInput').value;
+            // Parse simplistic Snort rule
+            // Look for content:"..."
+            const contentMatch = raw.match(/content:"(.*?)"/);
+            const msgMatch = raw.match(/msg:"(.*?)"/);
+
+            if (contentMatch && msgMatch) {
+                activeRule = { content: contentMatch[1], msg: msgMatch[1] };
+                alert("Rule Applied!");
+            } else {
+                alert("Invalid Rule Format. Needs content: and msg:");
+                activeRule = null;
+            }
+        }
+
+        function genTraffic() {
+            const log = document.getElementById('sigLog');
+            log.innerHTML = "";
+
+            const packets = [
+                "GET /index.html HTTP/1.1",
+                "POST /login.php user=admin",
+                "GET /images/logo.png",
+                "evil_801999999 (Malicious Payload)",  // User needs to detect this
+                "GET /style.css"
+            ];
+
+            packets.forEach(pkt => {
+                let isAlert = false;
+                if (activeRule && pkt.includes(activeRule.content)) {
+                    isAlert = true;
+                }
+
+                const div = document.createElement('div');
+                div.className = "log-entry " + (isAlert ? "alert" : "ok");
+                div.innerText = (isAlert ? `ALERT [${activeRule.msg}]: ` : "ALLOWED: ") + pkt;
+                log.appendChild(div);
+            });
+        }
+
+        /* --- Anomaly Logic --- */
+        function runAnomalySim() {
+            const graph = document.getElementById('graph');
+            const status = document.getElementById('anomStatus');
+            graph.innerHTML = "";
+
+            const count = 30;
+            for (let i = 0; i < count; i++) {
+                const bar = document.createElement('div');
+                bar.className = "bar";
+                bar.style.left = (i * (100 / count)) + "%";
+                bar.style.width = (100 / count - 1) + "%";
+
+                // Normal noise between 20-50
+                let height = 20 + Math.random() * 30;
+
+                // Anomaly at index 20
+                if (i >= 20 && i <= 23) {
+                    height = 100; // Spike
+                    bar.className += " high";
+                }
+
+                bar.style.height = height + "%";
+                graph.appendChild(bar);
+            }
+
+            status.innerText = "STATUS: ANOMALY DETECTED (High Variance)";
+            status.style.color = "#f44336";
+        }
+
+        function resetGraph() {
+            document.getElementById('graph').innerHTML = "";
+            document.getElementById('anomStatus').innerText = "STATUS: NORMAL";
+            document.getElementById('anomStatus').style.color = "#ffe0b2";
+        }
+    </script>
+</body>
+
+</html>

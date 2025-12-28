@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 06 Tool: Crack Lab</title>
+    <!-- Simple MD5 Lib -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            padding: 20px;
+            background: #212121;
+            color: #eee;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: #333;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #ff5722;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            opacity: 0.6;
+            font-weight: bold;
+            margin-right: 5px;
+            background: #424242;
+        }
+
+        .tab.active {
+            opacity: 1;
+            border-bottom: 3px solid #e64a19;
+            background: #333;
+        }
+
+        .content {
+            display: none;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        input,
+        textarea {
+            padding: 10px;
+            width: 300px;
+            background: #424242;
+            border: 1px solid #757575;
+            color: white;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #ff5722;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        .hash-out {
+            font-family: monospace;
+            color: #fff176;
+            margin-top: 5px;
+            word-break: break-all;
+        }
+
+        .db-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .db-table td,
+        .db-table th {
+            border: 1px solid #555;
+            padding: 8px;
+            text-align: left;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>Crack Lab Suites</h1>
+        <div class="tabs">
+            <div class="tab active" onclick="setTab('rainbow')">Variant B: Rainbow Table</div>
+            <div class="tab" onclick="setTab('salt')">Variant C: Salting</div>
+        </div>
+
+        <!-- RAINBOW -->
+        <div id="rainbow" class="content active">
+            <h3>Unsalted MD5 Cracker</h3>
+            <p>This tool contains a pre-computed "Rainbow List" of common passwords.</p>
+
+            <div style="background:#424242; padding:10px; margin-bottom:20px;">
+                <label>Hash Generator:</label>
+                <input type="text" id="rbInput" placeholder="Password to hash">
+                <button onclick="rbHash()">Get Hash</button>
+                <div id="rbHashOut" class="hash-out"></div>
+            </div>
+
+            <div style="border-top:1px dashed #777; padding-top:20px;">
+                <label>Rainbow Lookup:</label><br>
+                <input type="text" id="rbLookup" placeholder="Paste Hash Here" style="width:100%">
+                <button onclick="rbCrack()">Lookup Password</button>
+                <div id="rbResult" style="font-size:1.5em; font-weight:bold; margin-top:10px;"></div>
+            </div>
+        </div>
+
+        <!-- SALT -->
+        <div id="salt" class="content">
+            <h3>Salting Simulator</h3>
+            <table class="db-table">
+                <tr>
+                    <th>User</th>
+                    <th>Password</th>
+                    <th>Salt</th>
+                    <th>Stored Hash (MD5(Pass+Salt))</th>
+                </tr>
+                <tr>
+                    <td>Alice</td>
+                    <td><input type="text" id="passA" value="123456" style="width:100px;"></td>
+                    <td><span id="saltA">?</span> <button onclick="genSalt('A')">Gen Salt</button></td>
+                    <td id="hashA" class="hash-out">?</td>
+                </tr>
+                <tr>
+                    <td>Bob</td>
+                    <td><input type="text" id="passB" value="123456" style="width:100px;"></td>
+                    <td><span id="saltB">?</span> <button onclick="genSalt('B')">Gen Salt</button></td>
+                    <td id="hashB" class="hash-out">?</td>
+                </tr>
+            </table>
+            <button onclick="calcSalted()" style="margin-top:20px;">Calculate Hashes</button>
+        </div>
+    </div>
+
+    <script>
+        function setTab(id) {
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        /* --- RAINBOW --- */
+        // Mini Rainbow Table
+        const table = {
+            "5f4dcc3b5aa765d61d8327deb882cf99": "password",
+            "e10adc3949ba59abbe56e057f20f883e": "123456",
+            "5d41402abc4b2a76b9719d911017c592": "hello"
+        };
+        // Add dynamic generation for user experiment
+
+        function rbHash() {
+            const p = document.getElementById('rbInput').value;
+            const h = CryptoJS.MD5(p).toString();
+            document.getElementById('rbHashOut').innerText = h;
+            // Add to ephemeral table for the demo
+            table[h] = p;
+        }
+
+        function rbCrack() {
+            const h = document.getElementById('rbLookup').value.trim();
+            const res = table[h];
+            const div = document.getElementById('rbResult');
+
+            if (res) {
+                div.innerHTML = `<span style="color: #0f0">CRACKED: ${res}</span>`;
+            } else {
+                div.innerHTML = `<span style="color: #f44336">NOT FOUND in Rainbow Table</span>`;
+            }
+        }
+
+        /* --- SALT --- */
+        let salts = { A: "", B: "" };
+
+        function genSalt(u) {
+            const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+            let s = "";
+            for (let i = 0; i < 4; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+            salts[u] = s;
+            document.getElementById('salt' + u).innerText = s;
+        }
+
+        function calcSalted() {
+            if (!salts.A || !salts.B) return alert("Generate salts first");
+
+            const pA = document.getElementById('passA').value;
+            const pB = document.getElementById('passB').value;
+
+            document.getElementById('hashA').innerText = CryptoJS.MD5(pA + salts.A).toString();
+            document.getElementById('hashB').innerText = CryptoJS.MD5(pB + salts.B).toString();
+        }
+    </script>
+</body>
+
+</html>
