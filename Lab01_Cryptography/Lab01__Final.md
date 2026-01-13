@@ -4,7 +4,7 @@
 
 **Goal:** Explore historic encryption tools, understand their weaknesses, and reflect on real-world security principles.
 
-**Tools Required:** `FrequencyAnalyzer.html`
+**Tools Required:** `FrequencyAnalyzer.html`, `tools/AvalancheAES.html`
 
 ---
 
@@ -72,20 +72,48 @@ graph TD
 
 ---
 
-## **Step 4: Analysis & Reflection**
+---
 
-### **4.1 Keyspace Analysis**
+## **Step 4: The Butterfly Effect (Avalanche Effect)**
+
+**Story Context:**
+> Modern encryption (like AES) relies on a property called the **Avalanche Effect**. A small change in the input (like flipping 1 bit) should cause a drastic change in the output. Conversely, if a single bit of ciphertext is corrupted, the decryption should fail catastrophically (or produce garbage), preventing attackers from making controlled modifications.
+
+### **4.1 Identity Parameters**
+1.  **Plaintext:** `[YourFullName] is testing AES`
+2.  **Key:** `[YourStudentID]Secret`
+
+### **4.2 The Experiment**
+1.  Open `tools/AvalancheAES.html`.
+2.  Select **Mode: AES-CBC**.
+3.  Enter your **Key** and **Plaintext**. Click **Encrypt**.
+4.  In the **Insecure Channel** (middle), **click on ONE single bit** to flip it (red).
+5.  Click **Decrypt**.
+6.  Observe the **Decrypted Message (M')** and the status message.
+    *   *Note: If you see a "Padding Error", this is normal! It means the avalanche effect was so strong it destroyed the message structure.*
+7.  Take a screenshot showing the flipped bit and the result (Garbage or Error).
+
+---
+
+## **Step 5: Analysis & Reflection**
+
+### **5.1 Keyspace Analysis**
 1.  **Caesar:** The Caesar Cipher has a keyspace of 26. Can you think of why checking 26 keys are considered "insecure" even for a human?
 2.  **Vigenère:** If your keyword is length $L=5$, the keyspace is $26^5$. Calculate this number. Can you think of why it is not secure against a modern computer?
 3.  **Substitution:** The keyspace is $26!$ (Factorial). Calculate this value (approximate in scientific notation). Can you think of why this makes it secure against Brute Force but insecure against Frequency Analysis?
 
-### **4.2 Real-World Security Principles**
+### **5.2 Avalanche Analysis**
+1.  **Observation:** In Step 4, when you flipped just **one bit** of the ciphertext, what happened to the decrypted message? Did it change slightly or completely?
+2.  **Mode Comparison:** Try switching the mode to **AES-CTR**, Encrypt, Flip 1 bit, and Decrypt. How does the corruption in **AES-CTR** differ from **AES-CBC**? (Hint: Does the error spread to the whole block or stay local?)
+3.  **Reflection:** Why is the "Avalanche Effect" desirable in encryption? If a change in 1 bit of plaintext only changed 1 bit of ciphertext, how could an attacker use that?
+
+### **5.3 Real-World Security Principles**
 1.  **Enlist at least three security principles that you have encountered in real life.** (e.g., Least Privilege, Defense in Depth, Separation of Duties, etc., and where you saw them).
 Just think of the real world, not the classroom, for example, a cafe has a barista and a cashier, the barista is responsible for making coffee and the cashier is responsible for taking orders, the barista should not be able to access the cashier's data and vice versa.
 
 ---
 
-## **Step 5: Deliverables**
+## **Step 6: Deliverables**
 
 **Submission File:** `FirstName_LastName_Lab01_Final.docx`
 
@@ -97,7 +125,8 @@ Please include the following screenshots and answers in your submission:
 4.  **Vigenère Frequency:** Screenshot of frequency chart showing "flatness".
 5.  **Substitution Setup:** Screenshot of the tool (Red box around Key).
 6.  **Substitution Frequency:** Screenshot of frequency chart showing peaks.
-7.  **Answers:** Responses to the questions in **Step 4**.
+7.  **Avalanche Effect:** Screenshot of the `AvalancheAES` tool showing the scrambled output after flipping a bit.
+8.  **Answers:** Responses to the questions in **Step 5**.
 
 ---
 
