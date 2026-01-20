@@ -195,7 +195,8 @@
             <label>Mode:</label>
             <select id="errMode">
                 <option value="ECB">ECB</option>
-                <option value="CBC">CBC</option>
+                <option value="CBC">CBC (Self-Synchronizing)</option>
+                <option value="PCBC">PCBC (Propagating CBC)</option>
                 <option value="CTR">CTR</option>
             </select>
             <button onclick="runErrorEncrypt()">Encrypt</button>
@@ -278,16 +279,11 @@
         reader.onload = (evt) => {
             const img = new Image();
             img.onload = () => {
-                // Resize fit
-                let w = img.width, h = img.height;
-                const max = 300;
-                if(w>max){ h *= (max/w); w=max; }
-                if(h>max){ w *= (max/h); h=max; }
-                cvsOrig.width = w; cvsOrig.height = h;
-                cvsEnc.width = w; cvsEnc.height = h;
-                cvsOrig.getContext('2d').drawImage(img, 0, 0, w, h);
-                // Clear Enc
-                cvsEnc.getContext('2d').clearRect(0,0,w,h);
+                // Full Resolution (No Resize)
+                cvsOrig.width = img.width; cvsOrig.height = img.height;
+                cvsEnc.width = img.width; cvsEnc.height = img.height;
+                cvsOrig.getContext('2d').drawImage(img, 0, 0);
+                cvsEnc.getContext('2d').clearRect(0,0,img.width,img.height);
             };
             img.src = evt.target.result;
         }
@@ -334,11 +330,11 @@
             let r=input[i], g=input[i+1], b=input[i+2];
 
             if(mode === 'ECB') {
-                // ECB: C = SBox[P ^ K]
-                // Deterministic: Same Input -> Same Output
-                r = SBOX[r ^ key];
-                g = SBOX[g ^ key];
-                b = SBOX[b ^ key];
+                // ECB: Simple XOR to preserve visual patterns (The "Tux" Effect)
+                // User requested "slightly viewable" - Linear XOR does exactly this.
+                r = r ^ key;
+                g = g ^ key;
+                b = b ^ key;
             } 
             else if (mode === 'CBC') {
                 // CBC: C = SBox[P ^ IV ^ K] (Added key mixing inside)
@@ -385,20 +381,27 @@
         errOriginalBytes = [];
         for(let i=0; i<msg.length; i++) errOriginalBytes.push(msg.charCodeAt(i));
         
-        
         // Sim Encryption
         errCipherBytes = [];
         let iv = 0xAA;
+        let prevP = 0x00; // For PCBC
         
         for(let i=0; i<errOriginalBytes.length; i++) {
             let p = errOriginalBytes[i];
             let c = 0;
             
             if(mode === 'ECB') {
-                c = (p + 50) % 256; // Shift
+                c = (p + 50) % 256; 
             } else if (mode === 'CBC') {
                 c = ((p ^ iv) + 50) % 256;
                 iv = c;
+            } else if (mode === 'PCBC') {
+                // PCBC: C_i = Enc( P_i ^ IV_or_PrevC ^ PrevP )
+                // PrevC is 'iv' variable here.
+                c = ((p ^ iv ^ prevP) + 50) % 256;
+                let oldIV = iv;
+                iv = c; // Next IV is current C
+                prevP = p; // Next PrevP is current P
             } else { // CTR
                 let ks = (i * 17 + 23) % 256;
                 c = p ^ ks;
@@ -406,7 +409,8 @@
             errCipherBytes.push(c);
         }
         
-        errOriginalCipherBytes = [...errCipherBytes]; // Clone for highlighting
+        errOriginalCipherBytes = [...errCipherBytes];
+        
         renderErrCipher();
         document.getElementById('errPlainDisplay').innerText = "";
     }
@@ -419,7 +423,6 @@
             sp.innerText = b.toString(16).padStart(2,'0').toUpperCase() + " ";
             sp.className = 'bit';
             sp.onclick = () => {
-                // Flip MSB
                 errCipherBytes[idx] ^= 0x80;
                 renderErrCipher();
             };
@@ -438,45 +441,53 @@
         const mode = document.getElementById('errMode').value;
         let res = "";
         
+        // State for PCBC
+        let prevP = 0x00;
+        
         for(let i=0; i<errCipherBytes.length; i++) {
             let c = errCipherBytes[i];
             let p = 0;
             
             // Check if this byte was modified (simulating block corruption)
-            let isModified = (c !== getOriginalCipherByte(i)); // Strict equality for sim
+            let isModified = (c !== getOriginalCipherByte(i)); 
 
             if(mode === 'ECB') {
                 if(isModified) {
-                    p = Math.floor(Math.random() * 94) + 33; // Random printable garbage
+                    p = Math.floor(Math.random() * 94) + 33; 
                 } else {
                     p = (c - 50 + 256) % 256;
                 }
             } else if (mode === 'CBC') {
-                // CBC Decrypt: P[i] = Dec(C[i]) XOR C[i-1]
-                
-                // 1. Decryption Step (Simulating Block Cipher Avalanche)
+                // CBC: P[i] = Dec(C[i]) ^ C[i-1]
                 let decVal;
                 if(isModified) {
-                    // If C[i] is modified, Dec(C[i]) is completely chaotic garbage
                     decVal = Math.floor(Math.random() * 256);
                 } else {
-                    // Valid decryption of 
                     decVal = (c - 50 + 256) % 256;
                 }
 
-                // 2. XOR Step (Chaining)
-                // Must use the ACTUAL current previous byte (whether modified or not)
                 let prevC = (i === 0) ? 0xAA : errCipherBytes[i-1];
                 p = decVal ^ prevC;
 
+            } else if (mode === 'PCBC') {
+                // PCBC: P[i] = Dec(C[i]) ^ C[i-1] ^ P[i-1]
+                let decVal;
+                if(isModified) {
+                    decVal = Math.floor(Math.random() * 256);
+                } else {
+                    decVal = (c - 50 + 256) % 256;
+                }
+                
+                let prevC = (i === 0) ? 0xAA : errCipherBytes[i-1];
+                p = decVal ^ prevC ^ prevP;
+                
+                prevP = p; // Update for next round (Crucial for infinite propagation)
+
             } else { // CTR
-                // CTR: P[i] = C[i] XOR Keystream[i]
-                // Keystream is independent of Ciphertext bits, so error is local.
                 let ks = (i * 17 + 23) % 256;
                 p = c ^ ks;
             }
             
-            // Clean printable
             res += (p >= 32 && p <= 126) ? String.fromCharCode(p) : "?";
         }
         

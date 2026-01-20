@@ -14,17 +14,19 @@
 > Electronic Codebook (ECB) is the simplest mode. It breaks the message into blocks and encrypts each independently with the same key. `Enc(Block1)` always equals `Cipher1`.
 
 ### **1.1 The Experiment**
-1.  Open `tools/BlockCipherModes.html` (Tab 1: Visual Patterns).
-2.  **Upload an Image** (Ideally one with large patches of single colors, like a logo or cartoon).
-3.  Select **Mode: ECB** and click **Encrypt**.
-4.  Observe the result. Can you still "see" the image?
-5.  Switch to **Mode: CBC** or **CTR**.
-6.  Click **Encrypt** again.
-7.  Observe the result. Is it indistinguishable from random noise?
+
+1. Open `tools/BlockCipherModes.html` (Tab 1: Visual Patterns).
+2. **Upload an Image** (Ideally one with large patches of single colors, like a logo or cartoon).
+3. Select **Mode: ECB** and click **Encrypt**.
+4. Observe the result. Can you still "see" the image?
+5. Switch to **Mode: CBC** or **CTR**.
+6. Click **Encrypt** again.
+7. Observe the result. Is it indistinguishable from random noise?
 
 ### **1.2 Analysis**
-*   **Q1:** Explain why ECB preserves the visual patterns of the image. What does this tell you about encrypting repetitive data (like salary spreadsheets or headers) with ECB?
-*   **Q2:** Why does CBC (Cipher Block Chaining) fix this problem? (Hint: Look at the diagram logic in the tool if unsure).
+
+* **Q1:** Explain why ECB preserves the visual patterns of the image. What does this tell you about encrypting repetitive data (like salary spreadsheets or headers) with ECB?
+* **Q2:** Why does CBC (Cipher Block Chaining) fix this problem? (Hint: Look at the diagram logic in the tool if unsure).
 
 ---
 
@@ -34,26 +36,33 @@
 > What happens if a bit gets flipped during transmission? Does the whole message break, or just a part of it? This property is called "Error Propagation".
 
 ### **2.1 The Experiment**
-1.  Switch to **Tab 2: Error Propagation**.
-2.  **Mode: ECB**.
-    *   Encrypt the default message.
-    *   Click a bit in the **Ciphertext** to flip it (turn it Red).
-    *   **Decrypt**. Observe: How much of the plaintext is garbled? (Answer: The bits corresponding to that one block).
-3.  **Mode: CBC**.
-    *   Encrypt.
-    *   Flip a bit in the **First Block** (left side of hex).
-    *   **Decrypt**. Observe:
-        *   Block N (where you flipped): Completely Garbled.
-        *   Block N+1: ONE single bit error.
-        *   Block N+2: Perfectly fine.
-4.  **Mode: CTR**.
-    *   Encrypt.
-    *   Flip a bit.
-    *   **Decrypt**. Observe: Only **ONE** bit is flipped in the plaintext.
+
+1. Switch to **Tab 2: Error Propagation**.
+2. **Mode: ECB**.
+    * Encrypt. Flip a bit. **Decrypt**.
+    * Observe: Only the block corresponding to the flipped bit is garbled.
+3. **Mode: CBC (Self-Synchronizing)**.
+    * Encrypt. Flip a bit in the **First Block**.
+    * **Decrypt**. Observe:
+        * Block N (flipped): Completely Garbled.
+        * Block N+1: **ONE** single specific error.
+        * Block N+2 onwards: **Perfectly Fine**. (This is called Self-Synchronization).
+4. **Mode: PCBC (Propagating CBC)**.
+    * Encrypt. Flip a bit in the First Block.
+    * **Decrypt**. Observe:
+        * **EVERYTHING** from that point onward is garbage. The error propagates infinitely!
+        * This seems "safer" (integrity-wise) but is terrible for unreliable networks.
+5. **Mode: CTR**.
+    * Encrypt. Flip a bit.
+    * **Decrypt**. Observe: Only **ONE** bit is flipped in plaintext.
 
 ### **2.2 Analysis**
-*   **Q3 (The Streaming Question):** If you are streaming 4K video over a noisy wifi connection where bits often flip, which mode would cause less visual glitching: CBC or CTR? Why?
-*   **Q4 (Integrity):** If you *wanted* to ensure that any tampering destroys the message (so the receiver knows it's invalid), which mode is "better" at spreading the damage?
+
+* **Q3 (The Streaming Question):** If you are streaming 4K video over a noisy wifi connection where bits often flip, which mode is best?
+  * **CTR:** Glitch affects 1 pixel.
+  * **CBC:** Glitch ruins 1 block (16 pixels) + 1 pixel slightly wrong.
+  * **PCBC:** Glitch ruins the **ENTIRE REST OF THE MOVIE**.
+* **Q4 (Integrity vs Reliability):** Why is standard CBC preferred over PCBC for most applications, even though PCBC makes tampering more obvious? (Hint: Think about the cost of re-transmitting data if 1 bit flips).
 
 ---
 
@@ -64,15 +73,17 @@
 > **Critical Rule:** NEVER reuse the same Key + Nonce (Counter).
 
 ### **3.1 The Experiment**
-1.  Switch to **Tab 3: CTR Key Reuse**.
-2.  Notice **Message 1** and **Message 2** are different.
-3.  Observe that `C1` and `C2` are generated using the **Same Keystream**.
-4.  Look at the **Attacker's View**. The tool calculates `C1 ⊕ C2`.
-5.  Verify that this result is exactly equal to `M1 ⊕ M2`. The Key has been completely eliminated from the equation!
+
+1. Switch to **Tab 3: CTR Key Reuse**.
+2. Notice **Message 1** and **Message 2** are different.
+3. Observe that `C1` and `C2` are generated using the **Same Keystream**.
+4. Look at the **Attacker's View**. The tool calculates `C1 ⊕ C2`.
+5. Verify that this result is exactly equal to `M1 ⊕ M2`. The Key has been completely eliminated from the equation!
 
 ### **3.2 Analysis**
-*   **Q5:** If an attacker knows that `M1` starts with the word "Hello", how can they mistakenly decrypt the beginning of `M2` using only `C1 XOR C2`?
-*   **Q6:** How do we prevent this in the real world? (Hint: What parameter should change every time we encrypt, typically called a Nonce or IV?)
+
+* **Q5:** If an attacker knows that `M1` starts with the word "Hello", how can they mistakenly decrypt the beginning of `M2` using only `C1 XOR C2`?
+* **Q6:** How do we prevent this in the real world? (Hint: What parameter should change every time we encrypt, typically called a Nonce or IV?)
 
 ---
 
@@ -81,14 +92,16 @@
 **Submission File:** `FirstName_LastName_Lab02_Final.docx`
 
 **Include:**
-1.  **Screenshots:**
-    *   Step 1: Side-by-side comparison of ECB (Pattern Visible) vs CBC (Noise).
-    *   Step 2: Screenshot of CBC Decryption showing "Garbage Block + 1 Bit Error".
-    *   Step 3: Screenshot of the "Attacker's View" showing the XOR relationship.
-2.  **Answers:** Responses to Questions Q1 through Q6.
+
+1. **Screenshots:**
+    * Step 1: Side-by-side comparison of ECB (Pattern Visible) vs CBC (Noise).
+    * Step 2: Screenshot of CBC Decryption showing "Garbage Block + 1 Bit Error".
+    * Step 3: Screenshot of the "Attacker's View" showing the XOR relationship.
+2. **Answers:** Responses to Questions Q1 through Q6.
 
 ---
 
 ## **References**
-*   [Lecture 03 Slides](file:///c:/Users/theda/Study/sem2/TA6200/LectureNotes/lec03.pdf)
-*   [Block Cipher Modes Visualization (Wikipedia)](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation)
+
+* [Lecture 03 Slides](file:///c:/Users/theda/Study/sem2/TA6200/LectureNotes/lec03.pdf)
+* [Block Cipher Modes Visualization (Wikipedia)](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation)
