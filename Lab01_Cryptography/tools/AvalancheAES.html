@@ -311,6 +311,7 @@
 
 <script>
     // --- GLOBALS ---
+    console.log("What are you doing here? Do the assignment!"); 
     let iv = new Uint8Array(16); // Fixed Zero IV for lab demo simplicity
     let rawCipher = null;
     let modCipher = null;
@@ -481,7 +482,7 @@
                     lblBobMsg.classList.remove('highlight-label');
                 } else {
                     boxStatus.className = 'status-msg status-fail';
-                    boxStatus.innerText = "Avalanche Observed: Output differs.";
+                    boxStatus.innerText = "ERROR: Output mismatch.";
                     lblBobMsg.innerText = "Decrypted Message (M')";
                     lblBobMsg.classList.add('highlight-label');
                 }
@@ -498,7 +499,7 @@
                 boxStatus.innerHTML = "<b>Decryption Failed (Padding)</b><br>The ciphertext is so scrambled that it no longer has valid padding.";
                 boxStatus.style.display = 'block';
             }
-
+            
         } catch(e) {
             alert("Error: " + e.message);
         }

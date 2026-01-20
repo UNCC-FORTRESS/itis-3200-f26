@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lab 02: Block Cipher Modes Explorer</title>
+    <style>
+        :root {
+            --bg: #1e1e1e;
+            --panel: #252526;
+            --primary: #007acc;
+            --text: #d4d4d4;
+            --accent: #ffd700;
+            --mono: 'Consolas', 'Courier New', monospace;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { margin-bottom: 20px; color: white; }
+
+        .container {
+            width: 100%;
+            max-width: 1100px;
+            background: var(--panel);
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            overflow: hidden;
+            border: 1px solid #333;
+        }
+
+        /* NAVIGATION */
+        .tabs {
+            display: flex;
+            background: #333;
+            border-bottom: 2px solid #007acc;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #aaa;
+            transition: 0.2s;
+        }
+
+        .tab:hover { background: #3e3e42; color: white; }
+        .tab.active { background: var(--panel); color: var(--accent); border-top: 3px solid var(--accent); }
+
+        /* CONTENT */
+        .view { display: none; padding: 25px; }
+        .view.active { display: block; }
+        
+        .section-title {
+            font-size: 1.2rem;
+            color: var(--accent);
+            border-bottom: 1px solid #444;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+
+        /* CONTROLS */
+        .controls {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #333;
+        }
+
+        label { margin-right: 10px; font-weight: bold; }
+        
+        input, select, textarea {
+            background: #2d2d30;
+            border: 1px solid #444;
+            color: white;
+            padding: 8px;
+            border-radius: 3px;
+            font-family: var(--mono);
+        }
+
+        button {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+        button:hover { background: #0062a3; }
+        button.danger { background: #d32f2f; }
+        button.danger:hover { background: #b71c1c; }
+
+        /* VISUAL MODE */
+        .canvas-grid {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .monitor { text-align: center; }
+        canvas { border: 1px solid #555; background: #000; image-rendering: pixelated; }
+
+        /* ERROR MODE */
+        .bit-playground {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .hex-display {
+            font-family: var(--mono);
+            background: #111;
+            padding: 10px;
+            border: 1px solid #444;
+            word-break: break-all;
+            min-height: 40px;
+        }
+        .bit { display: inline-block; width: 20px; text-align: center; cursor: pointer; user-select: none; }
+        .bit:hover { background: #444; color: #fff; font-weight: bold; }
+        .bit.flipped { color: #f44336; font-weight: bold; }
+
+        /* REUSE MODE */
+        .reuse-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        .xor-result {
+            margin-top: 10px;
+            padding: 10px;
+            background: #2d2d2d;
+            font-family: var(--mono);
+            color: #4caf50;
+        }
+
+    </style>
+</head>
+<body>
+
+<h1>Lab 02: Block Cipher Modes</h1>
+
+<div class="container">
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('tabVisual')">1. Visual Patterns (ECB)</div>
+        <div class="tab" onclick="switchTab('tabError')">2. Error Propagation</div>
+        <div class="tab" onclick="switchTab('tabReuse')">3. CTR Key Reuse</div>
+    </div>
+
+    <!-- TAB 1: VISUAL -->
+    <div id="tabVisual" class="view active">
+        <div class="section-title">Visualizing Modes of Operation</div>
+        <p>Upload an image to see how ECB preserves patterns compared to CBC/CTR.</p>
+        
+        <div class="controls">
+            <input type="file" id="imgUpload" accept="image/*">
+            <label>Mode:</label>
+            <select id="visMode">
+                <option value="ECB">ECB (Electronic Codebook)</option>
+                <option value="CBC">CBC (Cipher Block Chaining)</option>
+                <option value="CTR">CTR (Counter Mode)</option>
+            </select>
+            <button onclick="runVisual()">Encrypt Image</button>
+        </div>
+
+        <div class="canvas-grid">
+            <div class="monitor">
+                <h4>Plaintext (Original)</h4>
+                <canvas id="cvsOrig"></canvas>
+            </div>
+            <div class="monitor">
+                <h4>Ciphertext (Result)</h4>
+                <canvas id="cvsEnc"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 2: ERROR -->
+    <div id="tabError" class="view">
+        <div class="section-title">Error Propagation Analysis</div>
+        <p>Flip a bit in the Ciphertext and see how it affects the Decrypted Plaintext.</p>
+
+        <div class="controls">
+            <label>Message:</label>
+            <input type="text" id="errMsg" value="Target location is Sector 7G. Do not delay." style="width: 300px;">
+            <label>Mode:</label>
+            <select id="errMode">
+                <option value="ECB">ECB</option>
+                <option value="CBC">CBC</option>
+                <option value="CTR">CTR</option>
+            </select>
+            <button onclick="runErrorEncrypt()">Encrypt</button>
+        </div>
+
+        <div class="bit-playground">
+            <div>
+                <label>Ciphertext (Click bits to flip):</label>
+                <div id="errCipherDisplay" class="hex-display"></div>
+            </div>
+            <div style="text-align: center;">
+                <button class="danger" onclick="runErrorDecrypt()">Decrypt Modified Ciphertext ⬇</button>
+            </div>
+            <div>
+                <label>Decrypted Plaintext:</label>
+                <div id="errPlainDisplay" class="hex-display" style="color: #fff;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TAB 3: REUSE -->
+    <div id="tabReuse" class="view">
+        <div class="section-title">The Danger of AES-CTR Key+Nonce Reuse</div>
+        <p>If you use the same Key and Nonce (Counter) for two different messages, the Keystream is identical.</p>
+        
+        <div class="controls">
+            <button onclick="runReuseSim()">Generating Keystream...</button>
+        </div>
+
+        <div class="reuse-grid">
+            <div>
+                <h4>Message 1 (Alice)</h4>
+                <input type="text" id="reuseM1" value="HeLLo World" oninput="runReuseSim()">
+                <div id="reuseC1" class="xor-result">C1: ...</div>
+            </div>
+            <div>
+                <h4>Message 2 (Bob)</h4>
+                <input type="text" id="reuseM2" value="SuPer SeCret" oninput="runReuseSim()">
+                <div id="reuseC2" class="xor-result">C2: ...</div>
+            </div>
+        </div>
+
+        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed #555;">
+            <h4>Attacker's View (C1 ⊕ C2)</h4>
+            <p>The attacker can compute <code>C1 ⊕ C2</code> which equals <code>M1 ⊕ M2</code>. The Key is eliminated!</p>
+            <div id="reuseXOR" class="xor-result" style="color: #f44336; font-size: 1.2rem;"></div>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    // --- TABS ---
+    function switchTab(id) {
+        document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        event.target.classList.add('active');
+    }
+
+    // --- VISUAL (CANVAS) ---
+    const cvsOrig = document.getElementById('cvsOrig');
+    const cvsEnc = document.getElementById('cvsEnc');
+    const fileInput = document.getElementById('imgUpload');
+
+    function initCanvas() {
+        [cvsOrig, cvsEnc].forEach(c => { c.width = 300; c.height = 300; });
+        const ctx = cvsOrig.getContext('2d');
+        ctx.fillStyle = "#000"; ctx.fillRect(0,0,300,300);
+        ctx.fillStyle = "#555"; ctx.font = "20px Consolas"; ctx.textAlign="center";
+        ctx.fillText("No Image", 150, 150);
+    }
+    initCanvas();
+
+    fileInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const img = new Image();
+            img.onload = () => {
+                // Resize fit
+                let w = img.width, h = img.height;
+                const max = 300;
+                if(w>max){ h *= (max/w); w=max; }
+                if(h>max){ w *= (max/h); h=max; }
+                cvsOrig.width = w; cvsOrig.height = h;
+                cvsEnc.width = w; cvsEnc.height = h;
+                cvsOrig.getContext('2d').drawImage(img, 0, 0, w, h);
+                // Clear Enc
+                cvsEnc.getContext('2d').clearRect(0,0,w,h);
+            };
+            img.src = evt.target.result;
+        }
+        reader.readAsDataURL(file);
+    };
+
+    function runVisual() {
+        const w = cvsOrig.width, h = cvsOrig.height;
+        const ctx1 = cvsOrig.getContext('2d');
+        const ctx2 = cvsEnc.getContext('2d');
+        const imgData = ctx1.getImageData(0,0,w,h);
+        const input = imgData.data;
+        const output = ctx2.createImageData(w,h);
+        const out = output.data;
+        
+        const mode = document.getElementById('visMode').value;
+        const key = 123; // Simple Visual Key (0-255)
+        
+        // Sim State
+        let iv = 50; 
+        
+        for(let i=0; i<input.length; i+=4) {
+            let r=input[i], g=input[i+1], b=input[i+2];
+
+            // Encrypt pixel based on mode
+            if(mode === 'ECB') {
+                // Deterministic: P XOR K
+                r ^= key; g ^= key; b ^= key;
+            } 
+            else if (mode === 'CBC') {
+                // Chain: (P XOR IV) -> Enc -> NextIV
+                // We'll treat R,G,B as separate chains for visual clarity or combined? 
+                // Separate is cleaner visually for Tux
+                r = (r ^ iv) + key; 
+                g = (g ^ r) + key; // chain inside pixel?
+                b = (b ^ g) + key; 
+                iv = b; // Carry over
+            }
+            else if (mode === 'CTR') {
+                // Stream: P XOR Keystream(Ctr)
+                // Ctr changes every pixel
+                let ks = (i * 12345 + 6789) % 256; 
+                r ^= ks; g ^= ks; b ^= ks;
+            }
+
+            out[i] = r; out[i+1] = g; out[i+2] = b; out[i+3] = 255;
+        }
+        
+        ctx2.putImageData(output, 0, 0);
+    }
+
+    // --- ERROR PROPAGATION ---
+    let errOriginalBytes = [];
+    let errCipherBytes = [];
+    let errOriginalCipherBytes = [];
+
+    
+    function runErrorEncrypt() {
+        const msg = document.getElementById('errMsg').value;
+        const mode = document.getElementById('errMode').value;
+        
+        errOriginalBytes = [];
+        for(let i=0; i<msg.length; i++) errOriginalBytes.push(msg.charCodeAt(i));
+        
+        // Sim Encryption
+        errCipherBytes = [];
+        let iv = 0xAA;
+        
+        for(let i=0; i<errOriginalBytes.length; i++) {
+            let p = errOriginalBytes[i];
+            let c = 0;
+            
+            if(mode === 'ECB') {
+                c = (p + 50) % 256; // Shift
+            } else if (mode === 'CBC') {
+                c = ((p ^ iv) + 50) % 256;
+                iv = c;
+            } else { // CTR
+                let ks = (i * 17 + 23) % 256;
+                c = p ^ ks;
+            }
+            errCipherBytes.push(c);
+        }
+        
+        errOriginalCipherBytes = [...errCipherBytes]; // Clone for highlighting
+        renderErrCipher();
+        document.getElementById('errPlainDisplay').innerText = "";
+    }
+
+    function renderErrCipher() {
+        const div = document.getElementById('errCipherDisplay');
+        div.innerHTML = '';
+        errCipherBytes.forEach((b, idx) => {
+            const sp = document.createElement('span');
+            sp.innerText = b.toString(16).padStart(2,'0').toUpperCase() + " ";
+            sp.className = 'bit';
+            sp.onclick = () => {
+                // Flip MSB
+                errCipherBytes[idx] ^= 0x80;
+                renderErrCipher();
+            };
+            if(Math.abs(b - getOriginalCipherByte(idx)) > 0) sp.classList.add('flipped');
+            div.appendChild(sp);
+        });
+    }
+
+    function getOriginalCipherByte(idx) {
+        if(idx < errOriginalCipherBytes.length) return errOriginalCipherBytes[idx];
+        return 0;
+    }
+
+
+    function runErrorDecrypt() {
+        const mode = document.getElementById('errMode').value;
+        let res = "";
+        let iv = 0xAA;
+        
+        // Sim Decrypt
+        for(let i=0; i<errCipherBytes.length; i++) {
+            let c = errCipherBytes[i];
+            let p = 0;
+            
+            if(mode === 'ECB') {
+                p = (c - 50 + 256) % 256;
+                // ECB Error Prop: 1 Bit Cipher -> 1 Block Plain (Here 1 byte -> 1 byte in stream sim, 
+                // but conceptually ECB block error affects whole block).
+                // Our SIM is byte-based, so 1 byte error -> 1 byte error.
+                // To be REALISTIC: We should assume blocks of 16 bytes.
+            } else if (mode === 'CBC') {
+                // Decrypt: P = Dec(C) ^ IV
+                // P[i] = (Dec(C[i]) ^ C[i-1])
+                // if C[i] is flipped -> P[i] is flipped (garbage in real block)
+                // if C[i-1] is flipped -> P[i] is flipped at specific bit
+                
+                // Let's rely on Lab 01 knowledge:
+                // C[i] flip -> P[i] totally garbage (in AES).
+                // C[i] flip -> P[i+1] specific bit flip (in AES).
+                
+                // Our SIM is simpler:
+                iv = (i === 0) ? 0xAA : errCipherBytes[i-1];
+                let dec = (c - 50 + 256) % 256;
+                p = dec ^ iv; // Wait, IV should be PREVIOUS ciphertext. 
+                
+                // Correction: In CBC Decryption, P[i] = Dec(C[i]) XOR C[i-1].
+                // Using current `iv` variable from loop might be tricky if we update it.
+                // Correct logic:
+                let prevC = (i === 0) ? 0xAA : errCipherBytes[i-1];
+                p = (c - 50 + 256) % 256; // Decrypt function 
+                // Wait, logic above in encrypt was: c = ((p ^ iv) + 50).
+                // So (c - 50) = p ^ iv.
+                // So p = (c-50) ^ iv. 
+                // And iv WAS the previous ciphertext (or 0xAA).
+                p = p ^ prevC;
+            } else { // CTR
+                let ks = (i * 17 + 23) % 256;
+                p = c ^ ks;
+            }
+            
+            // Clean printable
+            res += (p >= 32 && p <= 126) ? String.fromCharCode(p) : "?";
+        }
+        
+        document.getElementById('errPlainDisplay').innerText = res;
+    }
+
+    // --- REUSE ---
+    function runReuseSim() {
+        const m1 = document.getElementById('reuseM1').value;
+        const m2 = document.getElementById('reuseM2').value;
+        
+        // Keystream
+        const len = Math.max(m1.length, m2.length);
+        const ks = [];
+        for(let i=0; i<len; i++) ks.push((i * 99 + 7) % 256); // Fixed KS
+        
+        // Encrypt
+        const encrypt = (str) => {
+            let hex = "";
+            for(let i=0; i<str.length; i++) {
+                let p = str.charCodeAt(i);
+                let c = p ^ ks[i];
+                hex += c.toString(16).padStart(2,'0') + " ";
+            }
+            return hex;
+        };
+        
+        document.getElementById('reuseC1').innerText = "C1 (Hex): " + encrypt(m1);
+        document.getElementById('reuseC2').innerText = "C2 (Hex): " + encrypt(m2);
+        
+        // XOR Analysis
+        let xorRes = "";
+        for(let i=0; i<Math.min(m1.length, m2.length); i++) {
+            let v1 = m1.charCodeAt(i);
+            let v2 = m2.charCodeAt(i);
+            let x = v1 ^ v2; // This is M1 ^ M2
+            // It is ALSO C1 ^ C2
+            // Because (M1^K) ^ (M2^K) = M1^M2^K^K = M1^M2
+            xorRes += String.fromCharCode(x >= 32 ? x : 46); // . for non-print
+        }
+        document.getElementById('reuseXOR').innerText = "M1 ⊕ M2: " + xorRes + " (Result of C1 ⊕ C2)";
+    }
+    
+    // Init Reuse
+    runReuseSim();
+
+</script>
+
+</body>
+</html>
