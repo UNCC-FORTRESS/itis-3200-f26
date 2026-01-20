@@ -294,6 +294,24 @@
         reader.readAsDataURL(file);
     };
 
+    // --- CRYPTO PRIMITIVES (SIMULATION) ---
+    // Deterministic S-Box for non-linear substitution
+    const SBOX = new Uint8Array(256);
+    function initSBox() {
+        for(let i=0; i<256; i++) SBOX[i] = i;
+        // Fisher-Yates Shuffle with a fixed seed for consistency
+        let seed = 123456789;
+        function random() {
+            let x = Math.sin(seed++) * 10000;
+            return x - Math.floor(x);
+        }
+        for(let i=255; i>0; i--) {
+            const j = Math.floor(random() * (i + 1));
+            [SBOX[i], SBOX[j]] = [SBOX[j], SBOX[i]];
+        }
+    }
+    initSBox();
+
     function runVisual() {
         const w = cvsOrig.width, h = cvsOrig.height;
         const ctx1 = cvsOrig.getContext('2d');
@@ -304,33 +322,48 @@
         const out = output.data;
         
         const mode = document.getElementById('visMode').value;
-        const key = 123; // Simple Visual Key (0-255)
+        const key = 153; // Arbitrary 8-bit key
         
-        // Sim State
-        let iv = 50; 
+        // Sim State for chaining
+        let ivR = 50, ivG = 100, ivB = 150; 
         
+        // Counter for CTR
+        let ctr = 0;
+
         for(let i=0; i<input.length; i+=4) {
             let r=input[i], g=input[i+1], b=input[i+2];
 
-            // Encrypt pixel based on mode
             if(mode === 'ECB') {
-                // Deterministic: P XOR K
-                r ^= key; g ^= key; b ^= key;
+                // ECB: C = SBox[P ^ K]
+                // Deterministic: Same Input -> Same Output
+                r = SBOX[r ^ key];
+                g = SBOX[g ^ key];
+                b = SBOX[b ^ key];
             } 
             else if (mode === 'CBC') {
-                // Chain: (P XOR IV) -> Enc -> NextIV
-                // We'll treat R,G,B as separate chains for visual clarity or combined? 
-                // Separate is cleaner visually for Tux
-                r = (r ^ iv) + key; 
-                g = (g ^ r) + key; // chain inside pixel?
-                b = (b ^ g) + key; 
-                iv = b; // Carry over
+                // CBC: C = SBox[P ^ IV ^ K] (Added key mixing inside)
+                // R
+                r = SBOX[r ^ ivR ^ key];
+                ivR = r; // Feed ciphertext
+                // G
+                g = SBOX[g ^ ivG ^ key];
+                ivG = g;
+                // B
+                b = SBOX[b ^ ivB ^ key];
+                ivB = b;
             }
             else if (mode === 'CTR') {
-                // Stream: P XOR Keystream(Ctr)
-                // Ctr changes every pixel
-                let ks = (i * 12345 + 6789) % 256; 
-                r ^= ks; g ^= ks; b ^= ks;
+                // CTR: C = P ^ SBox[Counter ^ K]
+                // Keystream is independent of P
+                let ksR = SBOX[(ctr & 0xFF) ^ key];
+                let ksG = SBOX[((ctr+1) & 0xFF) ^ key];
+                let ksB = SBOX[((ctr+2) & 0xFF) ^ key];
+                
+                r ^= ksR;
+                g ^= ksG;
+                b ^= ksB;
+                
+                ctr += 3; // Increment counter
             }
 
             out[i] = r; out[i+1] = g; out[i+2] = b; out[i+3] = 255;
@@ -351,6 +384,7 @@
         
         errOriginalBytes = [];
         for(let i=0; i<msg.length; i++) errOriginalBytes.push(msg.charCodeAt(i));
+        
         
         // Sim Encryption
         errCipherBytes = [];
@@ -403,45 +437,41 @@
     function runErrorDecrypt() {
         const mode = document.getElementById('errMode').value;
         let res = "";
-        let iv = 0xAA;
         
-        // Sim Decrypt
         for(let i=0; i<errCipherBytes.length; i++) {
             let c = errCipherBytes[i];
             let p = 0;
             
+            // Check if this byte was modified (simulating block corruption)
+            let isModified = (c !== getOriginalCipherByte(i)); // Strict equality for sim
+
             if(mode === 'ECB') {
-                p = (c - 50 + 256) % 256;
-                // ECB Error Prop: 1 Bit Cipher -> 1 Block Plain (Here 1 byte -> 1 byte in stream sim, 
-                // but conceptually ECB block error affects whole block).
-                // Our SIM is byte-based, so 1 byte error -> 1 byte error.
-                // To be REALISTIC: We should assume blocks of 16 bytes.
+                if(isModified) {
+                    p = Math.floor(Math.random() * 94) + 33; // Random printable garbage
+                } else {
+                    p = (c - 50 + 256) % 256;
+                }
             } else if (mode === 'CBC') {
-                // Decrypt: P = Dec(C) ^ IV
-                // P[i] = (Dec(C[i]) ^ C[i-1])
-                // if C[i] is flipped -> P[i] is flipped (garbage in real block)
-                // if C[i-1] is flipped -> P[i] is flipped at specific bit
+                // CBC Decrypt: P[i] = Dec(C[i]) XOR C[i-1]
                 
-                // Let's rely on Lab 01 knowledge:
-                // C[i] flip -> P[i] totally garbage (in AES).
-                // C[i] flip -> P[i+1] specific bit flip (in AES).
-                
-                // Our SIM is simpler:
-                iv = (i === 0) ? 0xAA : errCipherBytes[i-1];
-                let dec = (c - 50 + 256) % 256;
-                p = dec ^ iv; // Wait, IV should be PREVIOUS ciphertext. 
-                
-                // Correction: In CBC Decryption, P[i] = Dec(C[i]) XOR C[i-1].
-                // Using current `iv` variable from loop might be tricky if we update it.
-                // Correct logic:
+                // 1. Decryption Step (Simulating Block Cipher Avalanche)
+                let decVal;
+                if(isModified) {
+                    // If C[i] is modified, Dec(C[i]) is completely chaotic garbage
+                    decVal = Math.floor(Math.random() * 256);
+                } else {
+                    // Valid decryption of 
+                    decVal = (c - 50 + 256) % 256;
+                }
+
+                // 2. XOR Step (Chaining)
+                // Must use the ACTUAL current previous byte (whether modified or not)
                 let prevC = (i === 0) ? 0xAA : errCipherBytes[i-1];
-                p = (c - 50 + 256) % 256; // Decrypt function 
-                // Wait, logic above in encrypt was: c = ((p ^ iv) + 50).
-                // So (c - 50) = p ^ iv.
-                // So p = (c-50) ^ iv. 
-                // And iv WAS the previous ciphertext (or 0xAA).
-                p = p ^ prevC;
+                p = decVal ^ prevC;
+
             } else { // CTR
+                // CTR: P[i] = C[i] XOR Keystream[i]
+                // Keystream is independent of Ciphertext bits, so error is local.
                 let ks = (i * 17 + 23) % 256;
                 p = c ^ ks;
             }
