@@ -189,8 +189,7 @@
             <label>Mode:</label>
             <select id="errMode">
                 <option value="ECB">ECB</option>
-                <option value="CBC">CBC (Self-Synchronizing)</option>
-                <option value="PCBC">PCBC (Propagating CBC)</option>
+                <option value="CBC">CBC (Cipher Block Chaining)</option>
                 <option value="CTR">CTR</option>
             </select>
             <button onclick="runErrorEncrypt()">Encrypt</button>
@@ -359,13 +358,8 @@
             if(mode === 'ECB') {
                 c = (p + 50) % 256; 
             } else if (mode === 'CBC') {
-                c = ((p ^ iv) + 50) % 256;
-                iv = c;
-            } else if (mode === 'PCBC') {
-                // PCBC: C_i = Enc( P_i ^ IV_or_PrevC ^ PrevP )
-                // PrevC is 'iv' variable here.
+                // PCBC Logic: C_i = Enc( P_i ^ IV_or_PrevC ^ PrevP )
                 c = ((p ^ iv ^ prevP) + 50) % 256;
-                let oldIV = iv;
                 iv = c; // Next IV is current C
                 prevP = p; // Next PrevP is current P
             } else { // CTR
@@ -424,19 +418,7 @@
                     p = (c - 50 + 256) % 256;
                 }
             } else if (mode === 'CBC') {
-                // CBC: P[i] = Dec(C[i]) ^ C[i-1]
-                let decVal;
-                if(isModified) {
-                    decVal = Math.floor(Math.random() * 256);
-                } else {
-                    decVal = (c - 50 + 256) % 256;
-                }
-
-                let prevC = (i === 0) ? 0xAA : errCipherBytes[i-1];
-                p = decVal ^ prevC;
-
-            } else if (mode === 'PCBC') {
-                // PCBC: P[i] = Dec(C[i]) ^ C[i-1] ^ P[i-1]
+                // PCBC Logic: P[i] = Dec(C[i]) ^ C[i-1] ^ P[i-1]
                 let decVal;
                 if(isModified) {
                     decVal = Math.floor(Math.random() * 256);
