@@ -108,8 +108,14 @@
             justify-content: center;
             flex-wrap: wrap;
         }
-        .monitor { text-align: center; }
-        canvas { border: 1px solid #555; background: #000; image-rendering: pixelated; }
+        .monitor { text-align: center; flex: 1; min-width: 300px; }
+        canvas { 
+            border: 1px solid #555; 
+            background: #000; 
+            image-rendering: pixelated; 
+            max-width: 100%; 
+            height: auto; 
+        }
 
         /* ERROR MODE */
         .bit-playground {
@@ -129,19 +135,7 @@
         .bit:hover { background: #444; color: #fff; font-weight: bold; }
         .bit.flipped { color: #f44336; font-weight: bold; }
 
-        /* REUSE MODE */
-        .reuse-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-        .xor-result {
-            margin-top: 10px;
-            padding: 10px;
-            background: #2d2d2d;
-            font-family: var(--mono);
-            color: #4caf50;
-        }
+
 
     </style>
 </head>
@@ -153,7 +147,7 @@
     <div class="tabs">
         <div class="tab active" onclick="switchTab('tabVisual')">1. Visual Patterns (ECB)</div>
         <div class="tab" onclick="switchTab('tabError')">2. Error Propagation</div>
-        <div class="tab" onclick="switchTab('tabReuse')">3. CTR Key Reuse</div>
+
     </div>
 
     <!-- TAB 1: VISUAL -->
@@ -217,35 +211,7 @@
         </div>
     </div>
 
-    <!-- TAB 3: REUSE -->
-    <div id="tabReuse" class="view">
-        <div class="section-title">The Danger of AES-CTR Key+Nonce Reuse</div>
-        <p>If you use the same Key and Nonce (Counter) for two different messages, the Keystream is identical.</p>
-        
-        <div class="controls">
-            <button onclick="runReuseSim()">Generating Keystream...</button>
-        </div>
 
-        <div class="reuse-grid">
-            <div>
-                <h4>Message 1 (Alice)</h4>
-                <input type="text" id="reuseM1" value="HeLLo World" oninput="runReuseSim()">
-                <div id="reuseC1" class="xor-result">C1: ...</div>
-            </div>
-            <div>
-                <h4>Message 2 (Bob)</h4>
-                <input type="text" id="reuseM2" value="SuPer SeCret" oninput="runReuseSim()">
-                <div id="reuseC2" class="xor-result">C2: ...</div>
-            </div>
-        </div>
-
-        <div style="margin-top: 20px; padding-top: 20px; border-top: 1px dashed #555;">
-            <h4>Attacker's View (C1 ⊕ C2)</h4>
-            <p>The attacker can compute <code>C1 ⊕ C2</code> which equals <code>M1 ⊕ M2</code>. The Key is eliminated!</p>
-            <div id="reuseXOR" class="xor-result" style="color: #f44336; font-size: 1.2rem;"></div>
-        </div>
-
-    </div>
 
 </div>
 
@@ -494,45 +460,7 @@
         document.getElementById('errPlainDisplay').innerText = res;
     }
 
-    // --- REUSE ---
-    function runReuseSim() {
-        const m1 = document.getElementById('reuseM1').value;
-        const m2 = document.getElementById('reuseM2').value;
-        
-        // Keystream
-        const len = Math.max(m1.length, m2.length);
-        const ks = [];
-        for(let i=0; i<len; i++) ks.push((i * 99 + 7) % 256); // Fixed KS
-        
-        // Encrypt
-        const encrypt = (str) => {
-            let hex = "";
-            for(let i=0; i<str.length; i++) {
-                let p = str.charCodeAt(i);
-                let c = p ^ ks[i];
-                hex += c.toString(16).padStart(2,'0') + " ";
-            }
-            return hex;
-        };
-        
-        document.getElementById('reuseC1').innerText = "C1 (Hex): " + encrypt(m1);
-        document.getElementById('reuseC2').innerText = "C2 (Hex): " + encrypt(m2);
-        
-        // XOR Analysis
-        let xorRes = "";
-        for(let i=0; i<Math.min(m1.length, m2.length); i++) {
-            let v1 = m1.charCodeAt(i);
-            let v2 = m2.charCodeAt(i);
-            let x = v1 ^ v2; // This is M1 ^ M2
-            // It is ALSO C1 ^ C2
-            // Because (M1^K) ^ (M2^K) = M1^M2^K^K = M1^M2
-            xorRes += String.fromCharCode(x >= 32 ? x : 46); // . for non-print
-        }
-        document.getElementById('reuseXOR').innerText = "M1 ⊕ M2: " + xorRes + " (Result of C1 ⊕ C2)";
-    }
-    
-    // Init Reuse
-    runReuseSim();
+
 
 </script>
 

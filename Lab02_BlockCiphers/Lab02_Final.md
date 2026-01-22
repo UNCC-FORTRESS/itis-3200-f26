@@ -69,21 +69,36 @@
 ## **Step 3: The Two-Time Pad (CTR Key Reuse)**
 
 **Context:**
-> Counter Mode (CTR) turns a Block Cipher into a Stream Cipher. It generates a "Keystream" and XORs it with the plaintext.
+> Counter Mode (CTR) generates a "Keystream" and XORs it with the plaintext.
 > **Critical Rule:** NEVER reuse the same Key + Nonce (Counter).
+> If $C_1 = M_1 \oplus K$ and $C_2 = M_2 \oplus K$, then we can derive $K = C_1 \oplus M_1$. If we guess $M_1$ correctly, we steal the Key!
 
-### **3.1 The Experiment**
+### **3.1 The "Known Plaintext" Attack**
 
 1. Switch to **Tab 3: CTR Key Reuse**.
-2. Notice **Message 1** and **Message 2** are different.
-3. Observe that `C1` and `C2` are generated using the **Same Keystream**.
-4. Look at the **Attacker's View**. The tool calculates `C1 ⊕ C2`.
-5. Verify that this result is exactly equal to `M1 ⊕ M2`. The Key has been completely eliminated from the equation!
+2. **Setup (Alice & Bob):**
+    * Observe the two messages ($M_1, M_2$) and their Keys ($K_1, K_2$).
+    * Currently, **Key 1 matches Key 2** (12345).
+3. **The Scenario:**
+    * You (the Attacker) have intercepted `C1` and `C2`.
+    * You also **know the content of Message 1** (e.g., standard header, or you tricked Alice into sending it).
+4. **The Automatic Calculation:**
+    * The tool uses your knowledge of $M_1$ to calculate: $Recovered\_M2 = (C_1 \oplus C_2) \oplus M_1$.
+    * Look at the **"Recovered Message 2"** box. It should perfectly match the secret $M_2$!
 
-### **3.2 Analysis**
+### **3.2 Analysis & Defense**
 
-* **Q5:** If an attacker knows that `M1` starts with the word "Hello", how can they mistakenly decrypt the beginning of `M2` using only `C1 XOR C2`?
-* **Q6:** How do we prevent this in the real world? (Hint: What parameter should change every time we encrypt, typically called a Nonce or IV?)
+* **Task 1 (Attack):**
+  * Change "Message 2" in the Setup to a secret phrase (e.g., "Launch Nuke").
+  * Look at the "Attacker's Workspace".
+  * Did the tool immediately recover "Launch Nuke"? (Yes, because the math $S \oplus M_1$ always isolates $M_2$ if keys are reused).
+* **Task 2 (Defense):**
+  * Change **Key 2** to `99999` (so $K_1 \neq K_2$).
+  * Look at the "Recovered Message 2" box.
+  * What do you see now? Explain why the attack failed. (Hint: The equation is now $M_2 \oplus K_1 \oplus K_2$).
+
+* **Q5:** Why is reusing a Stream Cipher key strictly forbidden?
+* **Q6:** If you encrypt 1000 messages with the same Key+Nonce, and the attacker discovers the plaintext of **one** message, what happens to the other 999?
 
 ---
 
@@ -96,7 +111,7 @@
 1. **Screenshots:**
     * Step 1: Side-by-side comparison of ECB (Pattern Visible) vs CBC (Noise).
     * Step 2: Screenshot of CBC Decryption showing "Garbage Block + 1 Bit Error".
-    * Step 3: Screenshot of the "Attacker's View" showing the XOR relationship.
+    * Step 3: Screenshot of the "Attacker's View" showing the recovered Keystream and M2.
 2. **Answers:** Responses to Questions Q1 through Q6.
 
 ---
