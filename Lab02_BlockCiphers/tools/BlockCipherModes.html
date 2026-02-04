@@ -315,10 +315,21 @@
             }
             else if (mode === 'CTR') {
                 // CTR: C = P ^ SBox[Counter ^ K]
-                // Keystream is independent of P
-                let ksR = SBOX[(ctr & 0xFF) ^ key];
-                let ksG = SBOX[((ctr+1) & 0xFF) ^ key];
-                let ksB = SBOX[((ctr+2) & 0xFF) ^ key];
+                // Improved to use full counter bits to prevent 256-byte period repetition
+                
+                // R (ctr)
+                let mixedR = (ctr ^ (ctr >> 8) ^ (ctr >> 16)) & 0xFF;
+                let ksR = SBOX[mixedR ^ key];
+                
+                // G (ctr+1)
+                let cG = ctr + 1;
+                let mixedG = (cG ^ (cG >> 8) ^ (cG >> 16)) & 0xFF;
+                let ksG = SBOX[mixedG ^ key];
+
+                // B (ctr+2)
+                let cB = ctr + 2;
+                let mixedB = (cB ^ (cB >> 8) ^ (cB >> 16)) & 0xFF;
+                let ksB = SBOX[mixedB ^ key];
                 
                 r ^= ksR;
                 g ^= ksG;
