@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoMessenger - RSA Secure Mail</title>
+    <style>
+        :root {
+            --bg-color: #2c3e50;
+            --text-color: #ecf0f1;
+            --card-bg: #34495e;
+            --accent: #e74c3c;
+            --success: #2ecc71;
+            --input-bg: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 { margin-bottom: 5px; color: var(--text-color); }
+        p.subtitle { margin-top: 0; color: #bdc3c7; }
+
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1000px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .full-width { grid-column: 1 / -1; }
+
+        h2 { margin-top: 0; border-bottom: 1px solid #7f8c8d; padding-bottom: 10px; font-size: 1.2em; }
+
+        label { display: block; margin-top: 10px; font-weight: bold; color: #95a5a6; }
+
+        input, textarea, select {
+            width: 100%;
+            background: var(--input-bg);
+            border: 1px solid #7f8c8d;
+            color: white;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 5px;
+            font-family: monospace;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 15px;
+            width: 100%;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+
+        button:hover { background: #c0392b; }
+        button.success { background: var(--success); }
+        button.success:hover { background: #27ae60; }
+
+        .key-display { font-size: 0.8em; height: 80px; }
+        .message-box { height: 100px; }
+        
+        .status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            background: rgba(0,0,0,0.2);
+            display: none;
+        }
+
+        .icon-lock { font-size: 2em; float: right; }
+    </style>
+</head>
+<body>
+
+    <header style="text-align: center; margin-bottom: 30px;">
+        <h1>CryptoMessenger</h1>
+        <p class="subtitle">End-to-End Encrypted Simulation</p>
+    </header>
+
+    <div class="container">
+        
+        <!-- IDENTITY CARD -->
+        <div class="card full-width">
+            <h2><span class="icon-lock">🔒</span> My Identity</h2>
+            <p>Generate your RSA Keypair. Share your Public Key so others can message you.</p>
+            <button onclick="generateKeys()" class="success">Generate New Keypair</button>
+            
+            <div style="display: flex; gap: 20px; margin-top: 15px;">
+                <div style="flex: 1;">
+                    <label>My Public Key (Safe to Share)</label>
+                    <textarea id="my-public-key" class="key-display" readonly></textarea>
+                </div>
+                <div style="flex: 1;">
+                    <label>My Private Key (KEEP SECRET)</label>
+                    <textarea id="my-private-key" class="key-display" readonly style="color: #e74c3c;"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMPOSE CARD -->
+        <div class="card">
+            <h2>✉️ Compose Secure Message</h2>
+            
+            <label>Recipient's Public Key</label>
+            <textarea id="recipient-pub-key" class="key-display" placeholder="Paste their Public Key here..."></textarea>
+            
+            <label>Message</label>
+            <textarea id="compose-msg" class="message-box" placeholder="Top Secret contents..."></textarea>
+
+            <button onclick="encryptMessage()">Encrypt & Send</button>
+
+            <div id="compose-status" class="status"></div>
+            
+            <label>Encrypted Output (Ciphertext)</label>
+            <textarea id="cipher-output" class="key-display" readonly></textarea>
+        </div>
+
+        <!-- INBOX CARD -->
+        <div class="card">
+            <h2>📥 Inbox (Decrypt)</h2>
+            
+            <label>Received Ciphertext</label>
+            <textarea id="inbox-cipher" class="message-box" placeholder="Paste encrypted blob here..."></textarea>
+
+            <button onclick="decryptMessage()" class="success">Decrypt with My Private Key</button>
+
+            <div id="inbox-status" class="status"></div>
+            
+            <label>Decrypted Message</label>
+            <textarea id="plain-output" class="message-box" readonly style="color: #2ecc71; font-weight: bold;"></textarea>
+        </div>
+
+    </div>
+
+    <script>
+        let keyPair = null;
+
+        async function generateKeys() {
+            const btn = document.querySelector('button.success');
+            btn.innerText = "Generating...";
+            
+            try {
+                keyPair = await window.crypto.subtle.generateKey(
+                    {
+                        name: "RSA-OAEP",
+                        modulusLength: 2048,
+                        publicExponent: new Uint8Array([1, 0, 1]),
+                        hash: "SHA-256"
+                    },
+                    true,
+                    ["encrypt", "decrypt"]
+                );
+
+                const pubKey = await window.crypto.subtle.exportKey("spki", keyPair.publicKey);
+                const privKey = await window.crypto.subtle.exportKey("pkcs8", keyPair.privateKey);
+
+                document.getElementById('my-public-key').value = toPem(pubKey, "PUBLIC KEY");
+                document.getElementById('my-private-key').value = toPem(privKey, "PRIVATE KEY");
+                
+                btn.innerText = "Keys Generated!";
+                setTimeout(() => btn.innerText = "Generate New Keypair", 2000);
+
+            } catch (e) {
+                alert("Error generating keys: " + e);
+            }
+        }
+
+        async function encryptMessage() {
+            const pubKeyPem = document.getElementById('recipient-pub-key').value;
+            const msg = document.getElementById('compose-msg').value;
+
+            if(!pubKeyPem || !msg) return alert("Need Recipient Key and Message");
+
+            try {
+                // Import Recipient Public Key
+                const binaryDer = pemToArrayBuffer(pubKeyPem);
+                const pubKey = await window.crypto.subtle.importKey(
+                    "spki",
+                    binaryDer,
+                    { name: "RSA-OAEP", hash: "SHA-256" },
+                    false,
+                    ["encrypt"]
+                );
+
+                const enc = new TextEncoder();
+                const ciphertext = await window.crypto.subtle.encrypt(
+                    { name: "RSA-OAEP" },
+                    pubKey,
+                    enc.encode(msg)
+                );
+
+                document.getElementById('cipher-output').value = arrayBufferToBase64(ciphertext);
+                document.getElementById('compose-status').style.display = 'block';
+                document.getElementById('compose-status').innerText = "Message Encrypted Successfully!";
+
+            } catch (e) {
+                alert("Encryption Failed. Invalid Key? " + e);
+            }
+        }
+
+        async function decryptMessage() {
+            const cipherStr = document.getElementById('inbox-cipher').value;
+            
+            if(!keyPair) return alert("You don't have a Private Key yet! Generate one first.");
+            if(!cipherStr) return alert("No ciphertext to decrypt.");
+
+            try {
+                const ciphertext = base64ToArrayBuffer(cipherStr);
+                
+                const decrypted = await window.crypto.subtle.decrypt(
+                    { name: "RSA-OAEP" },
+                    keyPair.privateKey,
+                    ciphertext
+                );
+
+                const dec = new TextDecoder();
+                document.getElementById('plain-output').value = dec.decode(decrypted);
+
+                document.getElementById('inbox-status').style.display = 'block';
+                document.getElementById('inbox-status').innerText = "Message Decrypted Successfully!";
+
+            } catch (e) {
+                document.getElementById('plain-output').value = "DECRYPTION FAILED";
+                alert("Decryption Failed. Wrong Private Key or Corrupted Data.");
+            }
+        }
+
+        // Helpers
+        function toPem(buffer, label) {
+            const b64 = arrayBufferToBase64(buffer);
+            let pem = `-----BEGIN ${label}-----\n`;
+            for(let i=0; i<b64.length; i+=64) {
+                pem += b64.substring(i, i+64) + '\n';
+            }
+            pem += `-----END ${label}-----`;
+            return pem;
+        }
+
+        function pemToArrayBuffer(pem) {
+            const b64 = pem.replace(/-----BEGIN [^-]+-----/, '').replace(/-----END [^-]+-----/, '').replace(/\s/g, '');
+            return base64ToArrayBuffer(b64);
+        }
+
+        function arrayBufferToBase64(buffer) {
+            let binary = '';
+            const bytes = new Uint8Array(buffer);
+            const len = bytes.byteLength;
+            for (let i = 0; i < len; i++) {
+                binary += String.fromCharCode(bytes[i]);
+            }
+            return window.btoa(binary);
+        }
+
+        function base64ToArrayBuffer(base64) {
+            const binary_string = window.atob(base64);
+            const len = binary_string.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binary_string.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+    </script>
+</body>
+</html>

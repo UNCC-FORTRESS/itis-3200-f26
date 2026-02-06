@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LedgerLab - Integrity Simulator</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --text-color: #333;
+            --card-bg: #fff;
+            --success: #2ecc71;
+            --error: #e74c3c;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+
+        p.subtitle {
+            color: #7f8c8d;
+            margin-top: 0;
+        }
+
+        .ledger-container {
+            display: flex;
+            flex-direction: row;
+            gap: 20px;
+            overflow-x: auto;
+            padding: 20px;
+            max-width: 100%;
+        }
+
+        .block {
+            background: var(--card-bg);
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 20px;
+            width: 300px;
+            flex-shrink: 0;
+            border-top: 5px solid var(--success);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .block.broken {
+            border-top-color: var(--error);
+            background-color: #fdf5f5;
+        }
+
+        .block-header {
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .input-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.8em;
+            text-transform: uppercase;
+            color: #7f8c8d;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            box-sizing: border-box; /* Fix padding issues */
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .hash-display {
+            font-family: monospace;
+            font-size: 0.85em;
+            background: #eee;
+            padding: 8px;
+            border-radius: 4px;
+            word-break: break-all;
+            color: #555;
+        }
+
+        .chain-link {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            color: var(--success);
+            transition: color 0.3s;
+        }
+        
+        .chain-link.broken {
+            color: var(--error);
+        }
+
+        .status-badge {
+            font-size: 0.7em;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--success);
+            color: white;
+            text-transform: uppercase;
+        }
+
+        .block.broken .status-badge {
+            background: var(--error);
+        }
+
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>LedgerLab</h1>
+        <p class="subtitle">Immutable Chain Integrator</p>
+    </header>
+
+    <div class="ledger-container" id="ledger">
+        <!-- Blocks will be injected here -->
+    </div>
+
+    <script>
+        const DEFAULT_DATA = [
+            { id: 1, data: "Student: Alice\nAction: Enroll\nDate: 2026-01-10" },
+            { id: 2, data: "Student: Alice\nAction: Submit Lab 1\nGrade: A" },
+            { id: 3, data: "Student: Alice\nAction: Final Grade\nStatus: Pass" }
+        ];
+
+        let blocks = [];
+
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        class Block {
+            constructor(id, data, previousHash = "0000000000000000000000000000000000000000000000000000000000000000") {
+                this.id = id;
+                this.data = data;
+                this.previousHash = previousHash; // This is what is STORED in the block
+                this.currentHash = "";
+                this.isGenesis = id === 1;
+            }
+
+            async calculateHash() {
+                // The hash depends on ID, Data, and the Previous Hash stored in *this* block
+                return await sha256(this.id + this.data + this.previousHash);
+            }
+        }
+
+        async function initLedger() {
+            const container = document.getElementById('ledger');
+            container.innerHTML = '';
+            blocks = [];
+
+            let prevHash = "0000000000000000000000000000000000000000000000000000000000000000";
+
+            for (let i = 0; i < DEFAULT_DATA.length; i++) {
+                // In a valid chain, the block stores the hash of the actual previous block
+                // For simplified simulation, we initialize them correctly.
+                const blockInfo = DEFAULT_DATA[i];
+                let blk = new Block(blockInfo.id, blockInfo.data, prevHash);
+                
+                // Calculate this block's hash
+                blk.currentHash = await blk.calculateHash();
+                prevHash = blk.currentHash; // For the next block initialization
+                
+                blocks.push(blk);
+                renderBlock(blk, i);
+
+                // Add link arrow if not last
+                if (i < DEFAULT_DATA.length - 1) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'chain-link';
+                    arrow.id = `link-${i}`;
+                    arrow.innerHTML = '&#8594;'; // Right arrow
+                    container.appendChild(arrow);
+                }
+            }
+        }
+
+        function renderBlock(block, index) {
+            const container = document.getElementById('ledger');
+            
+            const el = document.createElement('div');
+            el.className = 'block';
+            el.id = `block-${index}`;
+            
+            el.innerHTML = `
+                <div class="block-header">
+                    <span>Block #${block.id}</span>
+                    <span class="status-badge" id="badge-${index}">Valid</span>
+                </div>
+                
+                <div class="input-group">
+                    <label>Data</label>
+                    <textarea oninput="updateChain(${index})" id="data-${index}">${block.data}</textarea>
+                </div>
+
+                <div class="input-group">
+                    <label>Previous Hash</label>
+                    <div class="hash-display" id="prev-${index}">${block.previousHash.substring(0, 16)}...</div>
+                    <input type="hidden" id="full-prev-${index}" value="${block.previousHash}">
+                </div>
+
+                <div class="input-group">
+                    <label>Current Hash</label>
+                    <div class="hash-display" id="curr-${index}">${block.currentHash.substring(0, 16)}...</div>
+                </div>
+            `;
+            
+            container.appendChild(el);
+        }
+
+        async function updateChain(changedIndex) {
+            // User edited data in block[changedIndex]
+            
+            // 1. Update the data of the modified block
+            const dataEl = document.getElementById(`data-${changedIndex}`);
+            blocks[changedIndex].data = dataEl.value;
+
+            // 2. Recalculate hash of THIS block
+            const newHash = await blocks[changedIndex].calculateHash();
+            blocks[changedIndex].currentHash = newHash;
+            updateBlockVisuals(changedIndex);
+
+            // 3. Propagate changes? 
+            // In this simulator, we want to show the BROKEN link.
+            // Block (N+1) stores "Previous Hash". 
+            // If Block N's hash changes, it no longer matches Block (N+1)'s "Previous Hash".
+            
+            validateChain();
+        }
+
+        async function validateChain() {
+            // Check every connection
+            for (let i = 0; i < blocks.length; i++) {
+                // Recalculate self to ensure UI is up to date
+                blocks[i].currentHash = await blocks[i].calculateHash();
+                updateBlockVisuals(i);
+
+                if (i > 0) {
+                     // Check if Block[i].previousHash matches Block[i-1].currentHash
+                    const prevBlock = blocks[i - 1];
+                    const currBlock = blocks[i];
+                    
+                    const linkEl = document.getElementById(`link-${i-1}`);
+                    const blockEl = document.getElementById(`block-${i}`);
+                    const badgeEl = document.getElementById(`badge-${i}`);
+
+                    if (currBlock.previousHash !== prevBlock.currentHash) {
+                        // BROKEN LINK
+                        linkEl.classList.add('broken');
+                        blockEl.classList.add('broken'); // The block is invalid because its pointer is wrong regarding the previous block? 
+                        // Actually, in blockchains, the block is valid if H(block) is valid. 
+                        // But here we want to show the chain is broken.
+                        
+                        // Let's mark the link as broken.
+                        // And mark the subsequent block as "Invalid Link".
+                        badgeEl.innerText = "Link Error";
+                        badgeEl.style.backgroundColor = "var(--error)";
+                    } else {
+                        // VALID
+                        linkEl.classList.remove('broken');
+                        blockEl.classList.remove('broken');
+                        badgeEl.innerText = "Valid";
+                        badgeEl.style.backgroundColor = "var(--success)";
+                    }
+                }
+            }
+        }
+
+        function updateBlockVisuals(index) {
+            const hashDiv = document.getElementById(`curr-${index}`);
+            hashDiv.innerText = blocks[index].currentHash.substring(0, 16) + "...";
+        }
+
+        // Init
+        document.addEventListener('DOMContentLoaded', initLedger);
+
+    </script>
+</body>
+</html>

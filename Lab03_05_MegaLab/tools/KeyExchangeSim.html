@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KeyExchangeSim - Diffie-Hellman Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --alice-color: #3498db;
+            --bob-color: #e67e22;
+            --eve-color: #e74c3c;
+            --shared-color: #2ecc71;
+            --card-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 { margin-bottom: 5px; color: #34495e; }
+        p.subtitle { margin-top: 0; color: #7f8c8d; }
+
+        .simulation-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
+        .panel {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: var(--card-shadow);
+            border-top: 5px solid #ccc;
+        }
+
+        .panel.alice { border-top-color: var(--alice-color); }
+        .panel.bob { border-top-color: var(--bob-color); }
+        .panel.eve { border-top-color: var(--eve-color); background-color: #fff5f5; }
+
+        .panel-header {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .alice .panel-header { color: var(--alice-color); }
+        .bob .panel-header { color: var(--bob-color); }
+        .eve .panel-header { color: var(--eve-color); }
+
+        .control-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; color: #555; }
+        
+        input[type="number"], input[type="text"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1.1em;
+            box-sizing: border-box;
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-size: 1em;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            margin-top: 5px;
+        }
+
+        .alice button { background-color: var(--alice-color); }
+        .bob button { background-color: var(--bob-color); }
+        .eve button { background-color: var(--eve-color); }
+
+        button:hover { opacity: 0.9; }
+
+        .output-box {
+            background: #eee;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            margin-top: 10px;
+            min-height: 20px;
+            word-break: break-all;
+        }
+
+        .parameters {
+            grid-column: 1 / span 3;
+            background: #fff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            box-shadow: var(--card-shadow);
+            border: 1px solid #ddd;
+        }
+
+        .parameters input { width: 80px; text-align: center; }
+
+        .arrow-flow {
+            text-align: center;
+            color: #aaa;
+            font-size: 2em;
+            margin: 10px 0;
+            user-select: none;
+        }
+
+        .shared-secret {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>KeyExchangeSim</h1>
+        <p class="subtitle">Secure Channel Establishment & Interception</p>
+    </header>
+
+    <div class="simulation-container">
+        
+        <div class="parameters">
+            <span style="font-weight: bold; margin-right: 15px;">Global Parameters:</span>
+            <label style="display:inline;">Modulus (p): <input type="number" id="g-p" value="23"></label>
+            <label style="display:inline; margin-left: 15px;">Generator (g): <input type="number" id="g-g" value="5"></label>
+        </div>
+
+        <!-- ALICE -->
+        <div class="panel alice">
+            <div class="panel-header">Alice</div>
+            
+            <div class="control-group">
+                <label>Secret (a)</label>
+                <input type="number" id="alice-secret" value="6">
+            </div>
+
+            <button onclick="calculateAlicePublic()">1. Calc Public (A)</button>
+            <div class="output-box" id="alice-public-display">A = ?</div>
+
+            <div class="arrow-flow">&#8594; Sends A &#8594;</div>
+
+            <div class="control-group">
+                <label>Received (B)</label>
+                <input type="number" id="alice-received-b" placeholder="Wait for Bob...">
+            </div>
+
+            <button onclick="calculateAliceShared()">3. Calc Shared Secret</button>
+            <div class="output-box shared-secret" id="alice-shared-display">Secret = ?</div>
+        </div>
+
+        <!-- EVE -->
+        <div class="panel eve">
+            <div class="panel-header">Eve (Attacker)</div>
+            
+            <div class="control-group">
+                <label>Intercepted Channel</label>
+                <p style="font-size: 0.9em; color: #666;">Eve sees everything sent over the wire.</p>
+            </div>
+
+            <div class="output-box">
+                Known Publics:<br>
+                p = <span id="eve-p">?</span><br>
+                g = <span id="eve-g">?</span><br>
+                A = <span id="eve-A">?</span> (Alice's Public)<br>
+                B = <span id="eve-B">?</span> (Bob's Public)
+            </div>
+
+            <div class="control-group">
+                <label>Attack</label>
+                <button onclick="tryCrack()">Try to Calculate Secret</button>
+            </div>
+
+            <div class="output-box" id="eve-result" style="color: red;">
+                Waiting...
+            </div>
+        </div>
+
+        <!-- BOB -->
+        <div class="panel bob">
+            <div class="panel-header">Bob</div>
+
+            <div class="control-group">
+                <label>Secret (b)</label>
+                <input type="number" id="bob-secret" value="15">
+            </div>
+
+            <button onclick="calculateBobPublic()">2. Calc Public (B)</button>
+            <div class="output-box" id="bob-public-display">B = ?</div>
+
+            <div class="arrow-flow">&#8592; Sends B &#8592;</div>
+
+            <div class="control-group">
+                <label>Received (A)</label>
+                <input type="number" id="bob-received-a" placeholder="Wait for Alice...">
+            </div>
+
+            <button onclick="calculateBobShared()">3. Calc Shared Secret</button>
+            <div class="output-box shared-secret" id="bob-shared-display">Secret = ?</div>
+        </div>
+
+    </div>
+
+    <script>
+        // Modular Exponentiation: (base^exp) % mod
+        function powerMod(base, exp, mod) {
+            let res = 1n;
+            base = BigInt(base) % BigInt(mod);
+            const bigExp = BigInt(exp);
+            const bigMod = BigInt(mod);
+            for (let i = 0n; i < bigExp; i++) {
+                res = (res * base) % bigMod;
+            }
+            return Number(res);
+        }
+
+        // Alice Logic
+        function calculateAlicePublic() {
+            const p = document.getElementById('g-p').value;
+            const g = document.getElementById('g-g').value;
+            const a = document.getElementById('alice-secret').value;
+            
+            if(!p || !g || !a) return alert("P, G, and Secret A are required");
+
+            // A = g^a mod p
+            const A = powerMod(g, a, p);
+            
+            document.getElementById('alice-public-display').innerText = `A = ${g}^${a} mod ${p} = ${A}`;
+            
+            // "Send" to network (Eve and Bob see it)
+            updateNetwork('A', A);
+            document.getElementById('bob-received-a').value = A;
+        }
+
+        function calculateAliceShared() {
+            const p = document.getElementById('g-p').value;
+            const a = document.getElementById('alice-secret').value;
+            const B = document.getElementById('alice-received-b').value;
+
+            if(!B) return alert("Alice hasn't received B yet!");
+
+            // S = B^a mod p
+            const S = powerMod(B, a, p);
+            document.getElementById('alice-shared-display').innerText = `Secret = ${B}^${a} mod ${p} = ${S}`;
+        }
+
+        // Bob Logic
+        function calculateBobPublic() {
+            const p = document.getElementById('g-p').value;
+            const g = document.getElementById('g-g').value;
+            const b = document.getElementById('bob-secret').value;
+             
+            if(!p || !g || !b) return alert("P, G, and Secret B are required");
+
+            // B = g^b mod p
+            const B = powerMod(g, b, p);
+            
+            document.getElementById('bob-public-display').innerText = `B = ${g}^${b} mod ${p} = ${B}`;
+            
+            // "Send" to network
+            updateNetwork('B', B);
+            document.getElementById('alice-received-b').value = B;
+        }
+
+        function calculateBobShared() {
+            const p = document.getElementById('g-p').value;
+            const b = document.getElementById('bob-secret').value;
+            const A = document.getElementById('bob-received-a').value;
+
+            if(!A) return alert("Bob hasn't received A yet!");
+
+            // S = A^b mod p
+            const S = powerMod(A, b, p);
+            document.getElementById('bob-shared-display').innerText = `Secret = ${A}^${b} mod ${p} = ${S}`;
+        }
+
+        // Eve Logic
+        function updateNetwork(type, value) {
+            // Update Eve's view
+            document.getElementById('eve-p').innerText = document.getElementById('g-p').value;
+            document.getElementById('eve-g').innerText = document.getElementById('g-g').value;
+            
+            if(type === 'A') document.getElementById('eve-A').innerText = value;
+            if(type === 'B') document.getElementById('eve-B').innerText = value;
+        }
+
+        function tryCrack() {
+            // Eve tries to find S using only p, g, A, B.
+            // She DOES NOT know a or b.
+            // S = A^b mod p OR S = B^a mod p.
+            // She needs to solve Discrete Log problem: Find x such that g^x = A mod p (find a).
+            
+            const p = document.getElementById('g-p').value;
+            const g = document.getElementById('g-g').value;
+            const A = document.getElementById('eve-A').innerText;
+            const B = document.getElementById('eve-B').innerText;
+
+            if(A === '?' || B === '?') {
+                document.getElementById('eve-result').innerText = "Missing Intercepted Data!";
+                return;
+            }
+
+            // Simulate "Cracking"
+            document.getElementById('eve-result').innerText = "Cracking Discrete Log...";
+            
+            setTimeout(() => {
+                // Since numbers are small (23), we CAN brute force it for the demo to show it's mathematically POSSIBLE but hard with large numbers.
+                // But the requirement says "Visually prove that Eve *cannot* derive...". 
+                // However, for p=23 it is trivial.
+                // Let's explain WHY.
+
+                // If p is small, we show the result but say "EASY because p is small".
+                // If p is large, we say "Infeasible".
+                
+                if (p < 1000) {
+                     // Brute force 'a'
+                     let foundA = -1;
+                     for(let i=1; i<p; i++) {
+                         if (powerMod(g, i, p) == A) {
+                             foundA = i;
+                             break;
+                         }
+                     }
+                     
+                     if (foundA !== -1) {
+                         const S = powerMod(B, foundA, p);
+                         document.getElementById('eve-result').innerHTML = `
+                            [SUCCESS] Solved Discrete Log!<br>
+                            Found Secret a = ${foundA}<br>
+                            Calculated Shared Secret = ${S}<br>
+                            <small>(Only possible because P=${p} is tiny!)</small>
+                         `;
+                     } else {
+                         document.getElementById('eve-result').innerText = "[FAILED] Could not find discrete log.";
+                     }
+                } else {
+                    document.getElementById('eve-result').innerText = "[FAILED] P is too large for browser brute-force.";
+                }
+
+            }, 1000);
+        }
+
+    </script>
+</body>
+</html>
