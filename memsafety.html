@@ -154,8 +154,8 @@ function StackExploitTab(){
     // SFP
     const sfpOver=step>=1&&!isBenign;
     rows.push({addr:sfpAddr,kind:'sfp',
-      label:sfpOver?`SFP → 0x${padChar.repeat(4).split('').map(c=>c.charCodeAt(0).toString(16)).join('')}`:'Saved Frame Ptr (SFP)',
-      bytes:sfpOver?[padChar,padChar,padChar,padChar]:['SFP','SFP','SFP','SFP'],
+      label:sfpOver?`SFP → 0x${(padChar||'A').repeat(4).split('').map(c=>c.charCodeAt(0).toString(16)).join('')}`:'Saved Frame Ptr (SFP)',
+      bytes:sfpOver?[padChar||'A',padChar||'A',padChar||'A',padChar||'A']:['SFP','SFP','SFP','SFP'],
       active:sfpOver,
       ptr:step===4?'EBP→ESP':null,ptrColor:C.orange});
 
@@ -276,9 +276,10 @@ function StackExploitTab(){
           <Slider label="Shellcode" value={shellSize} min={4} max={80} onChange={v=>{setShellSize(v);setStep(0)}} color={C.cyan}/>
           <div style={{display:'flex',alignItems:'center',gap:8}}>
             <span style={{fontFamily:'var(--font-mono)',fontSize:11,color:C.dim,minWidth:70}}>Pad char</span>
-            <input value={padChar} maxLength={1} onChange={e=>setPadChar(e.target.value||'A')}
+            <input value={padChar} onChange={e=>{const v=e.target.value.toUpperCase().replace(/[^A-Z]/g,'');setPadChar(v.slice(-1))}}
+              onBlur={e=>{if(!padChar)setPadChar('A')}}
               style={{width:36,padding:'4px 8px',background:C.raised,border:`1px solid ${C.bdr}`,borderRadius:4,
-                color:C.gray,fontFamily:'var(--font-mono)',fontSize:14,textAlign:'center',outline:'none'}}/>
+                color:C.acc,fontFamily:'var(--font-mono)',fontSize:14,textAlign:'center',outline:'none'}}/>
           </div>
           <Label style={{marginTop:4,marginBottom:2}}>Shellcode Placement</Label>
           <div style={{display:'flex',gap:4}}>
@@ -390,7 +391,7 @@ function StackExploitTab(){
         <div style={{marginTop:10,marginLeft:-46,padding:'8px 10px',background:C.raised,borderRadius:4}}>
           <div style={{fontFamily:'var(--font-mono)',fontSize:11,display:'flex',flexWrap:'wrap',gap:'2px 16px'}}>
             <span><span style={{color:C.emerald,fontWeight:700}}>EIP</span> {step>=5&&mode==='exploit'?hex(shellAddr):step>=4?'ret':'in vulnerable()'}</span>
-            <span><span style={{color:C.orange,fontWeight:700}}>EBP</span> {step>=4&&mode==='exploit'?`0x${padChar.charCodeAt(0).toString(16).repeat(4).slice(0,8)}`:hex(sfpAddr)}</span>
+            <span><span style={{color:C.orange,fontWeight:700}}>EBP</span> {step>=4&&mode==='exploit'?`0x${(padChar||'A').charCodeAt(0).toString(16).repeat(4).slice(0,8)}`:hex(sfpAddr)}</span>
             <span><span style={{color:C.acc,fontWeight:700}}>ESP</span> {step>=5?hex(ripAddr+4):step>=4?hex(ripAddr):hex(baseAddr)}</span>
             {mode==='exploit'&&step>=5&&<span style={{color:C.rose,fontWeight:700}}>EXPLOITED</span>}
           </div>
