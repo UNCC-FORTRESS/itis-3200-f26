@@ -118,5 +118,5 @@
 
 ## **References**
 
-* [Lecture 03 Slides](file:///c:/Users/theda/Study/sem2/TA6200/LectureNotes/lec03.pdf)
+* [Lecture 03 Slides](../LectureNotes/lec03.pdf)
 * [Block Cipher Modes Visualization (Wikipedia)](https://en.wikipedia.org/wiki/Block_cipher_mode_of_operation)
