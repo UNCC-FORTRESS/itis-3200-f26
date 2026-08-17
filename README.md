@@ -1,6 +1,6 @@
 # ITIS 6200/8200 & ITIS 3200 — Lab Starter Repo
 
-Starter code and lab handouts for "Principles of Security and Privacy" (UNC Charlotte, Dr. Jian Xiang). This README reflects the **Fall 2026 reorganization**: every `LabNN_*` folder at the top level now matches, in both number and content, what actually ran as that lab in Spring 2026 (verified directly against the real Canvas assignment files, not just the earlier tool designs built for each slot). See `../ta-prep-fall2026/COURSE_MATERIALS_MAP.md` for the full investigation and `../ta-prep-fall2026/LAB_TOOL_AUDIT.md` for outstanding risk items.
+Starter code and lab handouts for "Principles of Security and Privacy" (UNC Charlotte, Dr. Jian Xiang). This README reflects the **Fall 2026 reorganization**: every `LabNN_*` folder at the top level now matches, in both number and content, what actually ran as that lab in Spring 2026 (verified directly against the real Canvas assignment files, not just the earlier tool designs built for each slot). See `ta-prep-fall2026/COURSE_MATERIALS_MAP.md` for the full investigation and `ta-prep-fall2026/LAB_TOOL_AUDIT.md` for outstanding risk items.
 
 ## Canonical labs (Lab00-08 — what actually shipped)
 
@@ -24,7 +24,7 @@ Nine lab folders were built for a lab-number slot that ultimately ran different 
 
 ## Built but never deployed as a numbered lab (still at top level, no conflict)
 
-`Lab09_XSS_SQLi/`, `Lab10_NetworkSecurity/`, `Lab11_IDS/`, `Lab12_MemoryVulns/`, `Lab13_SystemExecution/` — Canvas never assigned a Lab 09 or beyond in Spring 2026, so these don't collide with anything real. They're fully built, well-designed, and directly cited as optional starter material in several Fall 2026 project specs (`../ta-prep-fall2026/project-guidelines/`).
+`Lab09_XSS_SQLi/`, `Lab10_NetworkSecurity/`, `Lab11_IDS/`, `Lab12_MemoryVulns/`, `Lab13_SystemExecution/` — Canvas never assigned a Lab 09 or beyond in Spring 2026, so these don't collide with anything real. They're fully built, well-designed, and directly cited as optional starter material in several Fall 2026 project specs (`ta-prep-fall2026/project-guidelines/`).
 
 ## Other top-level material
 
@@ -32,7 +32,7 @@ Nine lab folders were built for a lab-number slot that ultimately ran different 
 - `basicGradingRubric.md` — generic 100-pt rubric + late-penalty scale.
 - `memsafety.html` / `memsafety-3200.html` — the standalone tool Lab 08 uses.
 - `LectureNotes/`, `LectureSchedule.pdf`, `Assignments/` (Homeworks 1-4) — lecture and homework material, unaffected by this reorganization.
-- `LABDOCS/`, `LabMD/` — two earlier generations of the lab sequence (CyberChef-only, pre-dating the custom-tool build-out). Superseded, kept for history — see `../ta-prep-fall2026/COURSE_MATERIALS_MAP.md` §2.1.
+- `LABDOCS/`, `LabMD/` — two earlier generations of the lab sequence (CyberChef-only, pre-dating the custom-tool build-out). Superseded, kept for history — see `ta-prep-fall2026/COURSE_MATERIALS_MAP.md` §2.1.
 
 ## GitHub Pages status — action needed before Fall 2026
 
