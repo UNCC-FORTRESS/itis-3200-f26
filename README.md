@@ -37,8 +37,6 @@ Nine lab folders were built for a lab-number slot that ultimately ran different 
 ## Other top-level material
 
 - `memsafety-3200.html` — the standalone tool Lab 08 uses.
-- `LectureNotes/`, `LectureSchedule.pdf`, `Assignments/` (Homeworks 1-4) — lecture and homework material, unaffected by this reorganization.
-- `LABDOCS/` — the earliest generation of the lab sequence (CyberChef-only, pre-dating the custom-tool build-out; course-agnostic, no section-specific branding). Superseded, kept for history. (The next generation, `LabMD/`, was written specifically for the grad section and lives only in `itis-6200-f26`.)
 
 ## GitHub Pages
 
