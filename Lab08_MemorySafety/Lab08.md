@@ -1,8 +1,6 @@
 # Lab 08: Memory Safety Vulnerabilities
 
-**Ported from the real Spring 2026 Canvas assignment** (`original_docs/Lab08_Original.docx` — the fuller of two duplicate copies found in the Canvas export; it includes a Part 2 that a shorter duplicate elsewhere in Canvas Files was missing). This replaced the never-deployed `archive/Lab08_WebIntro/` design (cookies/CSRF content that actually shipped as part of **Lab 05**, with hands-on exploitation in **Lab 06**) — see `../archive/README.md`.
-
-**Tool:** [Memory Safety Lab](https://uncc-fortress.github.io/itis-3200-f26/memsafety-3200.html) (`memsafety-3200.html` at repo root; the ITIS 3200-branded build of the same tool — the graduate section's identically-functioning `memsafety.html` lives in the separate `itis-6200-f26` repo). The Spring 2026 predecessor repo's grad-section assignment linked directly at `https://oatkrs.github.io/ITIS-6200/memsafety.html`, which is how we know this Pages-hosting pattern is what this lab actually depends on. Locally, you can also just open `memsafety-3200.html` directly in a browser without Pages.
+**Tool:** [Memory Safety Lab](https://uncc-fortress.github.io/itis-3200-f26/memsafety-3200.html) — you can also open `memsafety-3200.html` directly in a browser without needing the live link.
 
 ## Your Personalized Parameters
 
