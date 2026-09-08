@@ -1,6 +1,6 @@
 # Lab: Hashing & Message Authentication Codes (MAC)
 
-**Total: 100 points** (Part 0: 8, Part 1: 18, Part 2: 16, Part 3: 34, Part 4: 24).
+**Total: 100 points** (Part 0: 8 points, Part 1: 18 points, Part 2: 16 points, Part 3: 34 points, Part 4: 24 points).
 
 **Point-value rubric:** [`Lab_HashingMAC/LabHM_Rubric.md`](https://github.com/UNCC-FORTRESS/itis-3200-f26/blob/main/Lab_HashingMAC/LabHM_Rubric.md) — every item and what it's graded on, published up front.
 
