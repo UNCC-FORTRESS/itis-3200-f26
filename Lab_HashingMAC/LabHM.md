@@ -23,7 +23,7 @@ curl -O https://raw.githubusercontent.com/UNCC-FORTRESS/itis-3200-f26/main/Lab_H
 - [`password_kdf_bench.py`](https://github.com/UNCC-FORTRESS/itis-3200-f26/blob/main/Lab_HashingMAC/tools/password_kdf_bench.py) — salted vs. unsalted hashing and a KDF work-factor timing table (Part 4).
 - [`md5_collision_blocks.txt`](https://github.com/UNCC-FORTRESS/itis-3200-f26/blob/main/Lab_HashingMAC/tools/md5_collision_blocks.txt) — the colliding input pair for Part 2.
 
-As in Lab 03, you **may** re-implement any script in another language/toolchain, but your console screenshots must show the same scenarios.
+You **may** re-implement any script in another language/toolchain, but your console screenshots must show the same scenarios.
 
 ---
 
