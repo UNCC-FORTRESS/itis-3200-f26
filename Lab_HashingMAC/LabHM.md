@@ -57,7 +57,7 @@ Derive and record these once, at the top of your report:
 2. Change **exactly one character** of `SIP` (state which). Re-bake. Record the digest as `D2`.
 3. Compute the **bit difference (Hamming distance)** between `D1` and `D2`. In CyberChef: `From Hex` → `XOR` (scheme "Standard", key = the other digest as Hex) → look at the result, or add `To Binary` and count the `1`s. Or in Python: `bin(int(D1,16) ^ int(D2,16)).count("1")`. Record the count out of 256.
 4. In fresh tabs, hash `SIP` with **MD5**, **SHA1**, **SHA2-256**, **SHA3-256**. Record all four digests and their lengths in bits.
-5. **First MAC.** CyberChef → **HMAC**, hashing function **SHA256**, key **`FIRST`**. Input: `SIP`. Record the tag as `T1`. Now change the key to `FIRST` + `x` (one extra letter) and re-bake. Record the tag as `T2`.
+5. **First MAC.** CyberChef → **HMAC**, hashing function **SHA256**, key **`FIRST`**. Input: `SIP`. Record the tag as `T1`. Now change the key to `FIRST` + `x` (one extra letter, make sure the value of x is in the hexadecimal space, that is, one of these characters (0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f)) and re-bake. Record the tag as `T2`.
 
 ### Deliverables (6 pts)
 
