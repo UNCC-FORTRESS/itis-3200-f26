@@ -182,7 +182,7 @@ Lab-wise, if you face any difficulties with setup, tool usage, or markup, reach 
 These cover the *concepts*; none walk through this lab's specific parameters or give you the answers.
 
 1. **Computerphile:** [SHA: Secure Hashing Algorithm](https://www.youtube.com/watch?v=DMtFhACPnTY) and [Hashing Algorithms and Security](https://www.youtube.com/watch?v=b4b8ktEV4Bg).
-2. **Length extension:** [skullsecurity.org — "Everything you need to know about hash length extension attacks"](https://blog.skullsecurity.org/2012/everything-you-need-to-know-about-hash-length-extension-attacks).
+2. **Length extension:** [skullsecurity.org — "Everything you need to know about hash length extension attacks"](https://skullsecurity.org/2012/everything-you-need-to-know-about-hash-length-extension-attacks).
 3. **Collisions:** [shattered.io](https://shattered.io) (SHA-1); the [MD5 Wikipedia article](https://en.wikipedia.org/wiki/MD5#Collision_vulnerabilities) for the Part 2 block pair.
 4. **HMAC:** Bellare, Canetti, Krawczyk, *Keying Hash Functions for Message Authentication* (1996); RFC 2104.
 5. **Password storage:** [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
