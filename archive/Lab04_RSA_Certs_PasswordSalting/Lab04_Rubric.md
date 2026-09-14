@@ -1,6 +1,9 @@
 # Lab 04 — Grading Rubric
 
-**Total: 100 points** (Step 1: 24, Step 2: 30, Step 3: 20, Step 4: 26). See `../SCREENSHOT_PENALTY_POLICY.md` for the missing-screenshot cap policy, applied on top of this breakdown.
+> **Retired.** This lab is no longer assigned — its content is consolidated into [`Lab04Final`](../../Lab04Final/Lab04Final.md), trimmed from 9 schemes to 6. Kept here for historical reference only.
+
+
+**Total: 100 points** (Step 1: 24, Step 2: 30, Step 3: 20, Step 4: 26). See `../../SCREENSHOT_PENALTY_POLICY.md` for the missing-screenshot cap policy, applied on top of this breakdown.
 
 ## Step 1: RSA Key Pairs and Encryption — 24 pts
 - Deliverables (6 pts): 3 screenshots (key pair generation, Bob's encryption, Alice's decryption), 2 pts each.

@@ -1,6 +1,9 @@
 # Lab 03 — Grading Rubric
 
-**Total: 100 points** (Part 1: 45, Part 2: 40, Part 3: 15). See `../SCREENSHOT_PENALTY_POLICY.md` for the missing-screenshot cap policy, applied on top of this breakdown.
+> **Retired.** This lab is no longer assigned — its content is consolidated into [`Lab04Final`](../../Lab04Final/Lab04Final.md), trimmed from 9 schemes to 6. Kept here for historical reference only.
+
+
+**Total: 100 points** (Part 1: 45, Part 2: 40, Part 3: 15). See `../../SCREENSHOT_PENALTY_POLICY.md` for the missing-screenshot cap policy, applied on top of this breakdown.
 
 ## Part 1: Authenticated Encryption Analysis — 45 pts
 9 schemes, 5 points each (3 for screenshots, 1 each for confidentiality/integrity analysis):

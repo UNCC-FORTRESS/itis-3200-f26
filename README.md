@@ -9,17 +9,16 @@ Welcome! This repo has everything you need for the labs in *Introduction to Info
 | `Lab00_Dummy/` | SIP (Student Identity Parameter) mechanic, submission-format drill | CyberChef |
 | `Lab01_Cryptography/` | Classical ciphers, AES avalanche effect | Custom HTML tools |
 | `Lab02_BlockCiphers/` | ECB/CBC/CTR modes, two-time-pad attack | [BlockCipherModes.html](https://uncc-fortress.github.io/itis-3200-f26/Lab02_BlockCiphers/tools/BlockCipherModes.html) (required) + `aesVisual.py` (optional, source-only) |
-| `Lab03_AuthEncryption_DH_MITM/` | Authenticated-encryption scheme analysis, Diffie-Hellman + PRNG rollback, Mallory MITM programming assignment | CyberChef + Python (`Lab03DHProgram.py`) |
-| `Lab04_RSA_Certs_PasswordSalting/` | RSA encrypt/sign/verify, hybrid encryption, certificate chain-of-trust theory, password-salting timing simulation | CyberChef + a Colab notebook |
+| `Lab_HashingMAC/` | Hash properties/avalanche/collisions, length-extension attack vs. HMAC, password KDFs | CyberChef + Python (`tools/`) |
+| `Lab04Final/` | Authenticated-encryption schemes, Diffie-Hellman + PRNG rollback, Mallory MITM programming assignment, RSA encrypt/sign/verify, hybrid encryption, certificate chain-of-trust theory, password-salting timing simulation | CyberChef + Python (`Lab04FinalInterceptor.py`) + a Colab notebook |
 | `Lab05_AccessControl_BLP/` | Bell-LaPadula access control, web origins/same-origin policy, cookies/CSRF theory | Python (`BLP.py`/`Cases.py`) |
 | `Lab06_DVWA_PenTest/` | Hands-on CSRF, SQL injection, reflected + stored XSS exploitation | DVWA in a VM |
 | `Lab07_NetworkTrafficAnalysis/` | ARP, TELNET vs. SSH, TCP handshake, protocol statistics, Python sockets | Wireshark + NetLab (external, see below) + `server.py`/`client.py` |
 | `Lab08_MemorySafety/` | Buffer overflow, shellcode placement, exploit construction, mitigations | [memsafety-3200.html](https://uncc-fortress.github.io/itis-3200-f26/memsafety-3200.html) |
 
-Each lab folder has:
-- **`LabNN.md`** — the actual handout: steps, deliverables, analysis questions.
-- **`original_docs/`** — the original source document, in case a diagram, equation, or screenshot doesn't come through cleanly in the Markdown version. Treat it as the tiebreaker if anything here looks ambiguous.
-- **`LabNN_Rubric.md`** — the exact point breakdown for every part of the lab (screenshots, each analysis question, everything), published openly so you know exactly what you're being graded on before you submit.
+`Lab04Final/` consolidates the former `Lab03_AuthEncryption_DH_MITM/` and `Lab04_RSA_Certs_PasswordSalting/` into one lab — both are retired to `archive/` (see below), not separately assigned. `Lab_HashingMAC/` and `Lab04Final/` sit alongside the original `LabNN`-numbered sequence rather than following its naming pattern, but are graded exactly like the numbered labs.
+
+Each lab folder has a handout (steps, deliverables, analysis questions) and a `*_Rubric.md` — the exact point breakdown for every part of the lab, published openly so you know exactly what you're being graded on before you submit. Most also have an `original_docs/` folder with the original source document, in case a diagram, equation, or screenshot doesn't come through cleanly in the Markdown version — treat it as the tiebreaker if anything looks ambiguous (`Lab_HashingMAC/` and `Lab04Final/` were authored directly in Markdown, so they have no `original_docs/`).
 
 ## Grading & policy
 

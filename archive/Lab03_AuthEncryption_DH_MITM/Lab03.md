@@ -1,5 +1,8 @@
 # Lab 03: Authenticated Encryption, Diffie-Hellman & PRNG Analysis, and the Stateful Interceptor
 
+> **Retired.** This lab is no longer assigned — its content is consolidated into [`Lab04Final`](../../Lab04Final/Lab04Final.md), trimmed from 9 schemes to 6. Kept here for historical reference only.
+
+
 Total: 100 points (Part 1: 45, Part 2: 40, Part 3: 15).
 
 ## Part 1: Authenticated Encryption Analysis (45 points)
@@ -81,4 +84,4 @@ These explain the *concepts* behind Part 1's schemes and Part 2's key exchange �
 
 ## AI Appendix & submission format
 
-Follow `../guidelines.txt` (screenshot markup, naming convention, AI-use disclosure) — not restated here.
+Follow `../../guidelines.txt` (screenshot markup, naming convention, AI-use disclosure) — not restated here.

@@ -1,5 +1,8 @@
 # Lab 04: RSA, Digital Signatures & Hybrid Encryption, Certificates, and Password Salting
 
+> **Retired.** This lab is no longer assigned — its content is consolidated into [`Lab04Final`](../../Lab04Final/Lab04Final.md), trimmed from 9 schemes to 6. Kept here for historical reference only.
+
+
 Total: 100 points across 4 steps. Tool required throughout Steps 1-2: **[CyberChef](https://uncc-fortress.github.io/CyberChef/)** (backup: [gchq.github.io/CyberChef](https://gchq.github.io/CyberChef/)).
 
 ## Step 1: RSA Key Pairs and Encryption (24 points)
@@ -70,4 +73,4 @@ These explain the underlying concepts across all four steps — none of them are
 
 ## AI Appendix & submission format
 
-Follow `../guidelines.txt` — not restated here.
+Follow `../../guidelines.txt` — not restated here.
