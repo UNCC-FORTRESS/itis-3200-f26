@@ -1,6 +1,6 @@
 # Lab: Hashing & Message Authentication Codes (MAC)
 
-**Total: 100 points** (Part 0: 8, Part 1: 18, Part 2: 16, Part 3: 34, Part 4: 24).
+**Total: 100 points** (Part 0: 8 points, Part 1: 18 points, Part 2: 16 points, Part 3: 34 points, Part 4: 24 points).
 
 **Point-value rubric:** [`Lab_HashingMAC/LabHM_Rubric.md`](https://github.com/UNCC-FORTRESS/itis-3200-f26/blob/main/Lab_HashingMAC/LabHM_Rubric.md) — every item and what it's graded on, published up front.
 
@@ -23,7 +23,7 @@ curl -O https://raw.githubusercontent.com/UNCC-FORTRESS/itis-3200-f26/main/Lab_H
 - [`password_kdf_bench.py`](https://github.com/UNCC-FORTRESS/itis-3200-f26/blob/main/Lab_HashingMAC/tools/password_kdf_bench.py) — salted vs. unsalted hashing and a KDF work-factor timing table (Part 4).
 - [`md5_collision_blocks.txt`](https://github.com/UNCC-FORTRESS/itis-3200-f26/blob/main/Lab_HashingMAC/tools/md5_collision_blocks.txt) — the colliding input pair for Part 2.
 
-As in Lab 03, you **may** re-implement any script in another language/toolchain, but your console screenshots must show the same scenarios.
+You **may** re-implement any script in another language/toolchain, but your console screenshots must show the same scenarios.
 
 ---
 
@@ -57,7 +57,7 @@ Derive and record these once, at the top of your report:
 2. Change **exactly one character** of `SIP` (state which). Re-bake. Record the digest as `D2`.
 3. Compute the **bit difference (Hamming distance)** between `D1` and `D2`. In CyberChef: `From Hex` → `XOR` (scheme "Standard", key = the other digest as Hex) → look at the result, or add `To Binary` and count the `1`s. Or in Python: `bin(int(D1,16) ^ int(D2,16)).count("1")`. Record the count out of 256.
 4. In fresh tabs, hash `SIP` with **MD5**, **SHA1**, **SHA2-256**, **SHA3-256**. Record all four digests and their lengths in bits.
-5. **First MAC.** CyberChef → **HMAC**, hashing function **SHA256**, key **`FIRST`**. Input: `SIP`. Record the tag as `T1`. Now change the key to `FIRST` + `x` (one extra letter) and re-bake. Record the tag as `T2`.
+5. **First MAC.** CyberChef → **HMAC**, hashing function **SHA256**, key **`FIRST`**. Input: `SIP`. Record the tag as `T1`. Now change the key to `FIRST` + `x` (one extra letter, make sure the value of x is in the hexadecimal space, that is, one of these characters (0,1,2,3,4,5,6,7,8,9,a,b,c,d,e,f)) and re-bake. Record the tag as `T2`.
 
 ### Deliverables (6 pts)
 
@@ -182,7 +182,7 @@ Lab-wise, if you face any difficulties with setup, tool usage, or markup, reach 
 These cover the *concepts*; none walk through this lab's specific parameters or give you the answers.
 
 1. **Computerphile:** [SHA: Secure Hashing Algorithm](https://www.youtube.com/watch?v=DMtFhACPnTY) and [Hashing Algorithms and Security](https://www.youtube.com/watch?v=b4b8ktEV4Bg).
-2. **Length extension:** [skullsecurity.org — "Everything you need to know about hash length extension attacks"](https://blog.skullsecurity.org/2012/everything-you-need-to-know-about-hash-length-extension-attacks).
+2. **Length extension:** [skullsecurity.org — "Everything you need to know about hash length extension attacks"](https://skullsecurity.org/2012/everything-you-need-to-know-about-hash-length-extension-attacks).
 3. **Collisions:** [shattered.io](https://shattered.io) (SHA-1); the [MD5 Wikipedia article](https://en.wikipedia.org/wiki/MD5#Collision_vulnerabilities) for the Part 2 block pair.
 4. **HMAC:** Bellare, Canetti, Krawczyk, *Keying Hash Functions for Message Authentication* (1996); RFC 2104.
 5. **Password storage:** [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html).
