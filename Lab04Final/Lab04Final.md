@@ -1,6 +1,6 @@
 # Lab 04 (Final): Authenticated Encryption, Diffie-Hellman, RSA, Certificates & Password Salting
 
-**Total: 100 points** (Part 1: 24, Part 2: 24, Part 3: 12, Part 4: 10, Part 5: 10, Part 6: 8, Part 7: 12).
+**Total: 100 points** (Part 1: 24 points, Part 2: 24 points, Part 3: 12 points, Part 4: 10 points, Part 5: 10 points, Part 6: 8 points, Part 7: 12 points).
 
 **Point-value rubric:** [`Lab04Final_Rubric.md`](https://github.com/UNCC-FORTRESS/itis-3200-f26/blob/main/Lab04Final/Lab04Final_Rubric.md) — every item and what it's graded on, published up front.
 
@@ -169,7 +169,7 @@ Part 4 gave confidentiality only. Now add authenticity: Bob AES-encrypts a messa
 1. **Bob generates his own RSA key pair** (1024-bit, PEM), posts the public key.
 2. **Bob AES-encrypts.** "AES Encrypt," CBC mode, raw input, hex output, key = IV = your Student ID (repeated to meet the length requirement). Message: `"Thank you for sending me <your student ID> dollars, I have a lot of Fortnite skins now!"`. Save the resulting ciphertext.
 3. **Bob signs the ciphertext.** Add "RSA Sign" then "To binary" after the AES step; key = Bob's private key; digest SHA-256. Output is the signature.
-4. **Alice verifies.** New tab: "From binary" then "RSA Verify"; key = Bob's public key, signature input = the signature from step 3, message input = the ciphertext from step 2. A valid result shows "Verified: true".
+4. **Alice verifies.** New tab: "From binary" then "RSA Verify"; key = Bob's public key, signature input = the signature from step 3, message input = the ciphertext from step 2, Digest: SHA-256. A valid result shows "Verified: true".
 
 **Deliverables (3 pts):** (1 pt) Bob's key pair. (1 pt) Bob's message highlighted yellow + signature boxed red. (1 pt) Alice's signature and ciphertext inputs highlighted yellow + verification result boxed red.
 
