@@ -1,10 +1,8 @@
 # Lab 04 (Final): Authenticated Encryption, Diffie-Hellman, RSA, Certificates & Password Salting
 
-**Total: 100 points** (Part 1: 24 points, Part 2: 24 points, Part 3: 12 points, Part 4: 10 points, Part 5: 10 points, Part 6: 8 points, Part 7: 12 points).
+**Total: 100 points** (Part 1: 24 points, Part 2: 24 points, Part 3: 12 points, Part 4: 10 points, Part 5: 10 points, Part 6: 8 points, Part 7: 12 points)
 
-**Point-value rubric:** [`Lab04Final_Rubric.md`](https://github.com/UNCC-FORTRESS/itis-3200-f26/blob/main/Lab04Final/Lab04Final_Rubric.md) — every item and what it's graded on, published up front.
-
-**What this lab is.** This consolidates the old Lab 03 (Authenticated Encryption schemes, Diffie-Hellman/PRNG rollback, the Mallory MITM programming assignment) and the old Lab 04 (RSA, digital signatures, hybrid encryption, certificates, password salting) into one lab. Both are retired to `archive/` — this is the assigned version going forward. The throughline: you spend Parts 1-3 discovering *why* naive symmetric-crypto constructions and naive key exchange fail, then spend Parts 4-7 building up the asymmetric-crypto machinery (RSA, signatures, certificates) that exists specifically to fix the trust problems Part 2 exposes, closing with why password hashes need the opposite property from everything else in this lab.
+**Rubric:** [`Lab04Final_Rubric.md`](https://github.com/UNCC-FORTRESS/itis-3200-f26/blob/main/Lab04Final/Lab04Final_Rubric.md)
 
 **Tools required:**
 - **[CyberChef](https://uncc-fortress.github.io/CyberChef/)** (backup: [gchq.github.io/CyberChef](https://gchq.github.io/CyberChef/)) — Parts 1, 4, 5. Operations used: **AES Encrypt/Decrypt** (CBC and ECB), **HMAC**, **SHA2**, **RSA Generate Key Pair**, **RSA Encrypt/Decrypt**, **RSA Sign/Verify**.
